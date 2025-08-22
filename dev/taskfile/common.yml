@@ -106,6 +106,7 @@ tasks:
   
   
   
+  
   run-proxy:
     desc: Run a proxy to the Solo network (daemon mode, idempotent)
     cmds:
@@ -121,6 +122,7 @@ tasks:
           -v "$HOME/docker_mirror_certs":/ca \
           rpardini/docker-registry-proxy:0.6.5
         echo "Proxy is running at localhost:3128"
+  
   
   
   
