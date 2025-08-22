@@ -2,7 +2,7 @@ version: '3'
 
 includes:
   run:
-    taskfile: ./dev/Taskfile_{{OS}}.yml
+    taskfile: ./dev/taskfile/common.yml
     flatten: true
 
 dotenv: ['.env', '{{.ENV}}/.env', '{{.HOME}}/.env']
