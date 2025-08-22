@@ -1,0 +1,261 @@
+version: '3'
+
+env:
+  SOLO_CLUSTER_NAME: solo
+  SOLO_NAMESPACE: solo
+  SOLO_CLUSTER_SETUP_NAMESPACE: solo-cluster
+  SOLO_DEPLOYMENT: solo-deployment
+  NODEJS_VERSION: 20.18.0
+  NODES: 1
+  RELAY: false
+  MIRROR_NODE: false
+  
+tasks:
+  doctor:
+    desc: Check environment dependencies for Solo network
+    cmds:
+      - |
+        echo "🔍 Checking required CLI tools..."
+        for cmd in kubectl kind helm docker; do
+          if ! command -v $cmd >/dev/null 2>&1; then
+            echo "❌ Missing: $cmd"
+          else
+            echo "✅ $cmd found: $(command -v $cmd)"
+          fi
+        done
+      - |
+        echo "🔍 Checking optional tools..."
+        for cmd in k9s; do
+          if ! command -v $cmd >/dev/null 2>&1; then
+            echo "⚠️  Missing (optional): $cmd"
+          else
+            echo "✅ $cmd found: $(command -v $cmd)"
+          fi
+        done
+      - |
+        echo "🔍 Checking Node.js & NVM..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! command -v nvm >/dev/null 2>&1; then
+          echo "❌ NVM not installed"
+        else
+          echo "✅ NVM installed"
+          if ! nvm ls {{.NODE_VERSION}} | grep -q {{.NODE_VERSION}}; then
+            echo "⚠️  Node.js {{.NODE_VERSION}} not installed in NVM"
+          else
+            echo "✅ Node.js {{.NODE_VERSION}} available"
+          fi
+        fi
+      - |
+        echo "🔍 Checking npm package @hashgraph/solo..."
+        if ! npm list -g | grep -q '@hashgraph/solo'; then
+          echo "⚠️  @hashgraph/solo not installed globally"
+        else
+          echo "✅ @hashgraph/solo is installed"
+        fi
+      - echo "✅ Doctor checks completed."
+  
+  init:
+    desc: Initialize the environment (idempotent)
+    silent: true
+    cmds:
+      - |
+        echo "🔍 Checking and installing required CLI tools..."
+        for cmd in kubectl k9s kind helm; do
+          if ! command -v $cmd &> /dev/null; then
+            echo "⬇️  Installing $cmd..."
+            brew install $cmd
+          else
+            echo "✅ $cmd already installed"
+          fi
+        done
+      - |
+        echo "🔍 Checking NVM..."
+        if ! command -v nvm &> /dev/null; then
+          echo "⬇️  Installing NVM..."
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+        else
+          echo "✅ NVM already installed"
+        fi
+      - |
+        echo "🔍 Checking Node.js version..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! nvm ls ${NODE_VERSION} | grep -q "${NODE_VERSION}"; then
+          echo "⬇️  Installing Node.js ${NODE_VERSION}..."
+          nvm install ${NODE_VERSION}
+        fi
+        echo "✅ Using Node.js ${NODE_VERSION}"
+      - |
+        echo "🔍 Checking @hashgraph/solo..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! npm list -g | grep -q '@hashgraph/solo'; then
+          echo "⬇️  Installing @hashgraph/solo..."
+          npm install -g @hashgraph/solo
+        else
+          echo "✅ @hashgraph/solo already installed"
+        fi
+      - echo "🎉 Environment initialization complete!"
+  
+  reset:
+    desc: Rollback environment initialization
+    silent: true
+    cmds:
+      - |
+        echo "🧹 Removing CLI tools..."
+        for cmd in kubectl k9s kind helm; do
+          if command -v $cmd &> /dev/null; then
+            echo "❌ Uninstalling $cmd..."
+            brew uninstall $cmd || true
+          fi
+        done
+      - |
+        echo "🧹 Removing @hashgraph/solo..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if npm list -g | grep -q '@hashgraph/solo'; then
+          npm uninstall -g @hashgraph/solo
+        fi
+      - |
+        echo "🧹 Removing Kind cluster..."
+        if kind get clusters | grep -q "${SOLO_CLUSTER_NAME}"; then
+          kind delete cluster --name "${SOLO_CLUSTER_NAME}"
+          echo "✅ Cluster ${SOLO_CLUSTER_NAME} deleted"
+        else
+          echo "ℹ️  No cluster named ${SOLO_CLUSTER_NAME} found"
+        fi
+      - |
+        echo "🧹 Cleaning up ~/.solo..."
+        rm -rf ~/.solo || true
+        echo "✅ Cleanup complete"
+
+  
+  deploy-network:
+    desc: Deploy a n-node Solo network with optional relay and mirror-node
+    silent: true
+    cmds:
+      - echo "🚀 Deploying Solo network with {{.NODES}} nodes..."
+      - task destroy-network
+      - |
+        if ! kind get clusters | grep -q "${SOLO_CLUSTER_NAME}"; then
+          echo "⬇️  Creating Kind cluster ${SOLO_CLUSTER_NAME}..."
+          kind create cluster --name "${SOLO_CLUSTER_NAME}"
+        else
+          echo "✅ Kind cluster ${SOLO_CLUSTER_NAME} already exists"
+        fi
+      - task enable-metrics-server
+      - task set-proxy
+      - echo "🧹 Removing old ~/.solo data..."
+      - rm -rf ~/.solo || true
+      - echo "⬇️  Initializing Solo..."
+      - solo init
+      - solo cluster-ref connect --cluster-ref kind-${SOLO_CLUSTER_NAME} --context kind-${SOLO_CLUSTER_NAME}
+      - solo deployment create -n "${SOLO_NAMESPACE}" --deployment "${SOLO_DEPLOYMENT}"
+      - solo deployment add-cluster --deployment "${SOLO_DEPLOYMENT}" --cluster-ref kind-${SOLO_CLUSTER_NAME} --num-consensus-nodes {{.NODES}}
+      - solo node keys --gossip-keys --tls-keys --deployment "${SOLO_DEPLOYMENT}"
+      - solo cluster-ref setup -s "${SOLO_CLUSTER_SETUP_NAMESPACE}"
+      - solo network deploy --deployment "${SOLO_DEPLOYMENT}"
+      - solo node setup --deployment "${SOLO_DEPLOYMENT}"
+      - solo node start --deployment "${SOLO_DEPLOYMENT}"
+      - |
+        {{if .MIRROR_NODE}}
+        echo "📡 Deploying Mirror Node..."
+        solo mirror-node deploy --deployment "${SOLO_DEPLOYMENT}" --cluster-ref kind-${SOLO_CLUSTER_NAME}
+        {{end}}
+      - echo "🌐 Deploying Explorer..."
+      - solo explorer deploy --deployment "${SOLO_DEPLOYMENT}" --cluster-ref kind-${SOLO_CLUSTER_NAME}
+      - |
+        {{if .RELAY}}
+        echo "🔁 Deploying Relay..."
+        solo relay deploy -i node1 --deployment "${SOLO_DEPLOYMENT}"
+        {{end}}
+      - echo "🎉 Solo network deployed with {{.NODES}} nodes! Run 👉 k9s to manage the cluster."
+  
+  destroy-network:
+    desc: Destroy the Solo network and clean up resources
+    silent: true
+    cmds:
+      - echo "💣 Destroying existing Solo network (if any)..."
+      - kubectl delete ns "${SOLO_NAMESPACE}" --wait --ignore-not-found || true
+      - rm -rf ~/.solo || true
+      - echo "✅ Solo network destroyed."
+  
+  install-chaos-mesh:
+    desc: Install Chaos Mesh using Helm (idempotent)
+    cmds:
+      - helm repo add chaos-mesh https://charts.chaos-mesh.org || true
+      - |
+        kubectl get ns chaos-mesh >/dev/null 2>&1 || kubectl create ns chaos-mesh
+      - |
+        if ! helm status chaos-mesh -n chaos-mesh >/dev/null 2>&1; then
+          helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh --version 2.7.2
+        fi
+      - kubectl get pods --namespace chaos-mesh -l app.kubernetes.io/instance=chaos-mesh || true
+  
+  
+  uninstall-chaos-mesh:
+    desc: Uninstall Chaos Mesh and clean up resources (idempotent)
+    cmds:
+      - |
+        if helm status chaos-mesh -n chaos-mesh >/dev/null 2>&1; then
+          helm uninstall chaos-mesh -n chaos-mesh
+        fi
+      - |
+        if kubectl get ns chaos-mesh >/dev/null 2>&1; then
+          kubectl delete ns chaos-mesh --ignore-not-found
+        fi
+      - kubectl get pods --namespace chaos-mesh -l app.kubernetes.io/instance=chaos-mesh || true
+  
+  enable-metrics-server:
+    desc: Enable metrics server in the Solo network (idempotent)
+    cmds:
+      - |
+        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+        kubectl patch deployment -n kube-system metrics-server --type='json' \
+          -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+        echo "Metrics server is enabled."
+  
+  
+  
+  run-proxy:
+    desc: Run a proxy to the Solo network (daemon mode, idempotent)
+    cmds:
+      - task stop-proxy || true
+      - |
+        echo "Starting docker_registry_proxy..."
+        docker run --rm --name docker_registry_proxy -d \
+          --net kind --hostname docker-registry-proxy \
+          -p 0.0.0.0:3128:3128 \
+          -e ENABLE_MANIFEST_CACHE=true \
+          -e REGISTRIES="docker.io registry.k8s.io quay.io ghcr.io" \
+          -v "$HOME/docker_mirror_cache":/docker_mirror_cache \
+          -v "$HOME/docker_mirror_certs":/ca \
+          rpardini/docker-registry-proxy:0.6.5
+        echo "Proxy is running at localhost:3128"
+  
+  
+  stop-proxy:
+    desc: Stop and remove the proxy container (idempotent)
+    cmds:
+      - echo "Stopping and removing docker_registry_proxy container..."
+      - docker stop docker_registry_proxy || true
+      - docker rm docker_registry_proxy || true
+      - echo "Stopped and removed docker_registry_proxy container."
+  
+  set-proxy:
+    desc: Set up Docker to use the proxy (idempotent)
+    cmds:
+      - |
+        # see: https://github.com/rpardini/docker-registry-proxy
+        KIND_NAME={{.SOLO_CLUSTER_NAME}}
+        SETUP_URL=http://docker-registry-proxy:3128/setup/systemd
+        pids=()
+        for NODE in $(kind get nodes --name "$KIND_NAME"); do
+        docker exec "$NODE" sh -c "\
+        curl "${SETUP_URL}" \
+        | sed s/docker\.service/containerd\.service/g \
+        | sed '/Environment/ s/$/ \"NO_PROXY=127.0.0.0\/8,10.0.0.0\/8,172.16.0.0\/12,192.168.0.0\/16\"/' \
+        | bash" & pids+=("$!") # Configure every node in background
+        done
+        wait "${pids[@]}" # Wait for all configurations to end
