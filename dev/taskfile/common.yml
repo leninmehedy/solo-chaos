@@ -77,6 +77,12 @@ tasks:
           helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh --version 2.7.2
         fi
       - kubectl get pods --namespace chaos-mesh -l app.kubernetes.io/instance=chaos-mesh || true
+      - |
+        echo "⏳ Waiting for Chaos Mesh pods to be ready..."
+        kubectl wait --namespace chaos-mesh \
+          --for=condition=Ready pod \
+          --selector=app.kubernetes.io/instance=chaos-mesh \
+          --timeout=180s
   
   uninstall-chaos-mesh:
     desc: Uninstall Chaos Mesh and clean up resources (idempotent)

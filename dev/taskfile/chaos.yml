@@ -1,0 +1,54 @@
+version: '3'
+
+env:
+  SOLO_CLUSTER_NAME: solo
+  SOLO_NAMESPACE: solo
+  SOLO_CLUSTER_SETUP_NAMESPACE: solo-cluster
+  SOLO_DEPLOYMENT: solo-deployment
+ 
+vars:
+  UUID:
+    sh: uuidgen | tr -d '-' | head -c 8 | tr '[:upper:]' '[:lower:]'
+  
+tasks:
+  consensus-pod-failure:
+    desc: Run Pod Chaos experiments (failure)
+    vars:
+      NAMESPACE: "{{.SOLO_NAMESPACE}}"
+      NODE_NAMES: "{{.NODE_NAMES}}"
+      DURATION: '{{.DURATION | default "30s"}}'
+    cmds:
+      - echo "🔄 Running Pod Failure Chaos experiments..."
+      - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
+      - envsubst < ../../chaos/pod/consensus-node-failure.yml | kubectl apply -f -
+      - echo "✅ Pod Failure Chaos experiments applied."
+      - task run:show-experiment-status NAME="solo-chaos-pod-failure-{{.UUID}}"
+    env:
+      NAMESPACE: "{{.NAMESPACE}}"
+      NODE_NAMES: "{{.NODE_NAMES}}"
+      DURATION: "{{.DURATION}}"
+      UUID: "{{.UUID}}"
+
+  consensus-pod-kill:
+    desc: Run Pod Chaos experiments (kill)
+    vars:
+      NAMESPACE: "{{.SOLO_NAMESPACE}}"
+      NODE_NAMES: "{{.NODE_NAMES}}"
+    cmds:
+      - echo "🔄 Running Pod Kill Chaos experiments..."
+      - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
+      - envsubst < ../../chaos/pod/consensus-node-kill.yml | kubectl apply -f -
+      - echo "✅ Pod Kill Chaos experiments applied."
+      - task run:show-experiment-status NAME="solo-chaos-pod-kill-{{.UUID}}"
+    env:
+      NAMESPACE: "{{.NAMESPACE}}"
+      NODE_NAMES: "{{.NODE_NAMES}}"
+      UUID: "{{.UUID}}"
+      
+  show-experiment-status:
+    desc: Show the status of the pod chaos experiment
+    vars:
+      NAME: "{{.NAME}}"
+    cmds:
+      - echo "🔍 Fetching PodChaos status..."
+      - kubectl get events --field-selector involvedObject.kind=PodChaos,involvedObject.name={{.NAME}} -n chaos-mesh

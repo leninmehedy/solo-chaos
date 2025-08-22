@@ -1,7 +1,7 @@
 version: '3'
 
 includes:
-  run:
+  build:
     taskfile: ./dev/taskfile/{{OS}}.yml
     flatten: true
 

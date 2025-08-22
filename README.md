@@ -14,9 +14,17 @@ A reusable sets of chaos tests for solo test network. It can be used to test the
 ## Example usage
 
 ### Kill 1/3rd of the nodes
-- Deploy a 7 nodes network using `solo`
-- Run the chaos test to kill 1/3rd of the nodes:
+- Deploy a 5 nodes network
+```bash 
+task deploy-network NODES=5
+```
 
+- Deploy Chaos Mesh
+```bash 
+task install-chaos-mesh
+```
+
+- Run the chaos test to kill 1/3rd of the nodes:
 ```bash
 task run:pod-chaos --nodes 7 --kill 3
 ```
