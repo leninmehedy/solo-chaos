@@ -53,7 +53,7 @@ tasks:
         fi
       - echo "✅ Doctor checks completed."
   
-  init:
+  setup:
     desc: Initialize the environment (idempotent)
     silent: true
     cmds:

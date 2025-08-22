@@ -13,7 +13,12 @@ A reusable sets of chaos tests for solo test network. It can be used to test the
 
 ## Example usage
 
-### Kill 1/3rd of the nodes
+## Setup
+- Setup
+```bash
+task setup 
+```
+
 - Deploy a 5 nodes network
 ```bash 
 task deploy-network NODES=5
@@ -24,8 +29,15 @@ task deploy-network NODES=5
 task install-chaos-mesh
 ```
 
-- Run the chaos test to kill 1/3rd of the nodes:
+### Kill some of the nodes
+- Run the chaos test to kill some of the nodes (node2,node1):
 ```bash
-task run:pod-chaos --nodes 7 --kill 3
+task run:consensus-pod-kill NODE_NAMES=node2,node1
+```
+
+### Cause pod failure
+- Run the chaos test to trigger pod failure for some of the nodes (node2,node1):
+```bash
+task run:consensus-pod-failure NODE_NAMES=node2,node1 DURATION=60s
 ```
 
