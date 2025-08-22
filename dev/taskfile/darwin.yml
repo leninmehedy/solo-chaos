@@ -1,5 +1,10 @@
 version: '3'
 
+includes:
+  run:
+    taskfile: common.yml
+    flatten: true
+
 tasks:
   doctor:
     desc: Check environment dependencies for Solo network
@@ -45,26 +50,6 @@ tasks:
           echo "✅ @hashgraph/solo is installed"
         fi
       - echo "✅ Doctor checks completed."
-  
-  check-docker:
-    desc: Check docker settings
-    silent: true
-    cmds:
-      - |
-        echo "🔍 Checking Docker Desktop resources..."
-        docker_info=$(docker info --format '{{"{{json .}}"}}')
-        mem=$(echo "$docker_info" | jq '.MemTotal' 2>/dev/null || echo 0)
-        cpus=$(echo "$docker_info" | jq '.NCPU' 2>/dev/null || echo 0)
-        min_mem=$((46 * 1024 * 1024 * 1024))
-        min_cpus=10
-        if [ "$mem" -lt "$min_mem" ] || [ "$cpus" -lt "$min_cpus" ]; then
-          echo "❌ Docker Desktop resources too low: CPUs=$cpus, Mem=$(($mem/1024/1024/1024))GB"
-          echo "➡️  Please set at least 48GB RAM and 10 CPUs in Docker Desktop > Settings > Resources."
-          exit 1
-        else
-          echo "✅ Docker Desktop resources OK: CPUs=$cpus, Mem=$(($mem/1024/1024/1024))GB"
-        fi
-    
   
   init:
     desc: Initialize the environment (idempotent)
