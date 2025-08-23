@@ -10,8 +10,11 @@ env:
   RELAY: false
   MIRROR_NODE: false
   HEDERA_EXPLORER: false
-  
 
+vars:
+  UUID:
+    sh: uuidgen | tr -d '-' | head -c 8 | tr '[:upper:]' '[:lower:]'
+    
 tasks:
   deploy-network:
     desc: Deploy a n-node Solo network
@@ -84,6 +87,7 @@ tasks:
           --selector=app.kubernetes.io/instance=chaos-mesh \
           --timeout=180s
   
+  
   uninstall-chaos-mesh:
     desc: Uninstall Chaos Mesh and clean up resources (idempotent)
     cmds:
@@ -105,6 +109,7 @@ tasks:
         kubectl patch deployment -n kube-system metrics-server --type='json' \
           -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
         echo "Metrics server is enabled."
+  
   
   
   
@@ -131,6 +136,7 @@ tasks:
   
   
   
+  
   stop-proxy:
     desc: Stop and remove the proxy container (idempotent)
     cmds:
@@ -141,6 +147,7 @@ tasks:
           docker rm docker_registry_proxy || true
           echo "✅Stopped and removed docker_registry_proxy container."
         fi
+  
   
   
   set-proxy:
@@ -162,6 +169,7 @@ tasks:
         done
         wait "${pids[@]}" # Wait for all configurations to end
         echo "✅ Cluster configured to use the proxy."
+  
   
   
   check-docker:

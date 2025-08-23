@@ -1,11 +1,11 @@
 version: '3'
 
 includes:
-  common:
-    taskfile: common.yml
+  root:
+    taskfile: Taskfile.root.yml
     flatten: true
-  run:
-    taskfile: chaos.yml
+  chaos:
+    taskfile: Taskfile.chaos.yml
 
 tasks:
   doctor:

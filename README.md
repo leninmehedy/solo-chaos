@@ -32,12 +32,12 @@ task install-chaos-mesh
 ### Kill some of the nodes
 - Run the chaos test to kill some of the nodes (node2,node1):
 ```bash
-task run:consensus-pod-kill NODE_NAMES=node2,node1
+task chaos:pod:consensus-pod-kill NODE_NAMES=node2,node1
 ```
 
 ### Cause pod failure
 - Run the chaos test to trigger pod failure for some of the nodes (node2,node1):
 ```bash
-task run:consensus-pod-failure NODE_NAMES=node2,node1 DURATION=60s
+task chaos:pod:consensus-pod-failure NODE_NAMES=node2,node1 DURATION=60s
 ```
 

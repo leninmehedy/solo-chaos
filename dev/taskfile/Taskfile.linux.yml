@@ -1,0 +1,132 @@
+version: '3'
+# assumes debian linux
+
+includes:
+  root:
+    taskfile: Taskfile.root.yml
+    flatten: true
+  chaos:
+    taskfile: Taskfile.chaos.yml
+
+tasks:
+  doctor:
+    desc: Check environment dependencies for Solo network
+    cmds:
+      - task check-docker
+      - |
+        echo "🔍 Checking required CLI tools..."
+        for cmd in docker kubectl k9s kind helm jq kubectx; do
+          if ! command -v $cmd >/dev/null 2>&1; then
+            echo "❌ Missing: $cmd"
+          else
+            echo "✅ $cmd found: $(command -v $cmd)"
+          fi
+        done
+      - |
+        echo "🔍 Checking optional tools..."
+        for cmd in k9s; do
+          if ! command -v $cmd >/dev/null 2>&1; then
+            echo "⚠️  Missing (optional): $cmd"
+          else
+            echo "✅ $cmd found: $(command -v $cmd)"
+          fi
+        done
+      - |
+        echo "🔍 Checking Node.js & NVM..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! command -v nvm >/dev/null 2>&1; then
+          echo "❌ NVM not installed"
+        else
+          echo "✅ NVM installed"
+          if ! nvm ls {{.NODE_VERSION}} | grep -q {{.NODE_VERSION}}; then
+            echo "⚠️  Node.js {{.NODE_VERSION}} not installed in NVM"
+          else
+            echo "✅ Node.js {{.NODE_VERSION}} available"
+          fi
+        fi
+      - |
+        echo "🔍 Checking npm package @hashgraph/solo..."
+        if ! npm list -g | grep -q '@hashgraph/solo'; then
+          echo "⚠️  @hashgraph/solo not installed globally"
+        else
+          echo "✅ @hashgraph/solo is installed"
+        fi
+      - echo "✅ Doctor checks completed."
+
+  setup:
+    desc: Initialize the environment (idempotent)
+    silent: true
+    cmds:
+      - |
+        echo "🔍 Checking and installing required CLI tools..."
+        for cmd in kubectl k9s kind helm jq kubectx; do
+          if ! command -v $cmd &> /dev/null; then
+            echo "⬇️  Installing $cmd..."
+            sudo apt-get update
+            sudo apt-get install -y $cmd
+          else
+            echo "✅ $cmd already installed"
+          fi
+        done
+      - |
+        echo "🔍 Checking NVM..."
+        if ! command -v nvm &> /dev/null; then
+          echo "⬇️  Installing NVM..."
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+        else
+          echo "✅ NVM already installed"
+        fi
+      - |
+        echo "🔍 Checking Node.js version..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! nvm ls ${NODE_VERSION} | grep -q "${NODE_VERSION}"; then
+          echo "⬇️  Installing Node.js ${NODE_VERSION}..."
+          nvm install ${NODE_VERSION}
+        fi
+        echo "✅ Using Node.js ${NODE_VERSION}"
+      - |
+        echo "🔍 Checking @hashgraph/solo..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! npm list -g | grep -q '@hashgraph/solo'; then
+          echo "⬇️  Installing @hashgraph/solo..."
+          npm install -g @hashgraph/solo
+        else
+          echo "✅ @hashgraph/solo already installed"
+        fi
+      - echo "🎉 Environment initialization complete!"
+      - task doctor
+
+  reset:
+    desc: Rollback environment initialization
+    silent: true
+    cmds:
+      - |
+        echo "🧹 Removing CLI tools..."
+        for cmd in kubectl k9s kind helm; do
+          if command -v $cmd &> /dev/null; then
+            echo "❌ Uninstalling $cmd..."
+            sudo apt-get remove -y $cmd || true
+          fi
+        done
+      - |
+        echo "🧹 Removing @hashgraph/solo..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if npm list -g | grep -q '@hashgraph/solo'; then
+          npm uninstall -g @hashgraph/solo
+        fi
+      - |
+        echo "🧹 Removing Kind cluster..."
+        if kind get clusters | grep -q "${SOLO_CLUSTER_NAME}"; then
+          kind delete cluster --name "${SOLO_CLUSTER_NAME}"
+          echo "✅ Cluster ${SOLO_CLUSTER_NAME} deleted"
+        else
+          echo "ℹ️  No cluster named ${SOLO_CLUSTER_NAME} found"
+        fi
+      - |
+        echo "🧹 Cleaning up ~/.solo..."
+        rm -rf ~/.solo || true
+        echo "✅ Cleanup complete"

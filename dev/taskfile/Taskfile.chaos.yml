@@ -1,0 +1,14 @@
+version: '3'
+
+includes:
+  pod:
+    taskfile: Taskfile.chaos.pod.yml
+
+tasks:
+  show-experiment-status:
+    desc: Show the status of the pod chaos experiment
+    vars:
+      NAME: "{{.NAME}}"
+    cmds:
+      - echo "🔍 Fetching PodChaos status..."
+      - kubectl get events --field-selector involvedObject.kind=PodChaos,involvedObject.name={{.NAME}} -n chaos-mesh

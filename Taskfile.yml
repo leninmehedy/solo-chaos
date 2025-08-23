@@ -2,7 +2,7 @@ version: '3'
 
 includes:
   build:
-    taskfile: ./dev/taskfile/{{OS}}.yml
+    taskfile: ./dev/taskfile/Taskfile.{{OS}}.yml
     flatten: true
 
 dotenv: ['.env', '{{.ENV}}/.env', '{{.HOME}}/.env']
