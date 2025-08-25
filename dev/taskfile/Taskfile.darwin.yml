@@ -33,19 +33,35 @@ tasks:
       - |
         echo "🔍 Checking Node.js & NVM..."
         export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        if ! command -v nvm >/dev/null 2>&1; then
-          echo "❌ NVM not installed"
-        else
-          echo "✅ NVM installed"
-          if ! nvm ls {{.NODE_VERSION}} | grep -q {{.NODE_VERSION}}; then
-            echo "⚠️  Node.js {{.NODE_VERSION}} not installed in NVM"
+        bash -c "
+          source \"$NVM_DIR/nvm.sh\"
+          if ! command -v nvm >/dev/null 2>&1; then
+            echo '❌ NVM not installed'
           else
-            echo "✅ Node.js {{.NODE_VERSION}} available"
+            echo '✅ NVM installed'
+            if ! nvm ls {{.NODEJS_VERSION}} | grep -q '{{.NODEJS_VERSION}}'; then
+              echo '⚠️  Node.js {{.NODEJS_VERSION}} not installed in NVM'
+            else
+              echo '✅ Node.js {{.NODEJS_VERSION}} available'
+            fi
           fi
-        fi
+          echo '🔍 Checking npm package @hashgraph/solo...'
+          if ! npm list -g | grep -q '@hashgraph/solo'; then
+            echo '⚠️  @hashgraph/solo not installed globally'
+          else
+            echo '✅ @hashgraph/solo is installed'
+          fi
+        "
+        echo "✅ Doctor checks completed."
       - |
         echo "🔍 Checking npm package @hashgraph/solo..."
+        if ! command -v node >/dev/null 2>&1; then
+          echo "❌ Node.js not found. Exiting."
+          echo ""
+          echo "👉 Activate Node.js ${NODEJS_VERSION} in your current shell and re-run:"
+          echo "nvm use ${NODEJS_VERSION} && task doctor"
+          exit 1
+        fi
         if ! npm list -g | grep -q '@hashgraph/solo'; then
           echo "⚠️  @hashgraph/solo not installed globally"
         else
@@ -69,25 +85,37 @@ tasks:
         done
       - |
         echo "🔍 Checking NVM..."
-        if ! command -v nvm &> /dev/null; then
+        export NVM_DIR="$HOME/.nvm"
+        if [ ! -f "$NVM_DIR/nvm.sh" ]; then
           echo "⬇️  Installing NVM..."
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
         else
           echo "✅ NVM already installed"
         fi
       - |
-        echo "🔍 Checking Node.js version..."
+        echo "🔍 Checking Node.js version...${NODEJS_VERSION}"
         export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        if ! nvm ls ${NODE_VERSION} | grep -q "${NODE_VERSION}"; then
-          echo "⬇️  Installing Node.js ${NODE_VERSION}..."
-          nvm install ${NODE_VERSION}
-        fi
-        echo "✅ Using Node.js ${NODE_VERSION}"
+        bash -c "
+          source \"$NVM_DIR/nvm.sh\"
+          if ! nvm ls ${NODEJS_VERSION} | grep -q \"${NODEJS_VERSION}\"; then
+            echo \"⬇️  Installing Node.js ${NODEJS_VERSION}...\"
+            nvm install ${NODEJS_VERSION}
+          else
+            nvm use ${NODEJS_VERSION}
+          fi
+          echo \"✅ Node.js ${NODEJS_VERSION} is available\"
+        "
       - |
         echo "🔍 Checking @hashgraph/solo..."
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if ! command -v node >/dev/null 2>&1; then
+          echo "❌ Node.js not found. Exiting."
+          echo ""
+          echo "👉 Activate Node.js ${NODEJS_VERSION} in your current shell and re-run:"
+          echo "nvm use ${NODEJS_VERSION} && task setup"
+          exit 1
+        fi
+        
+        echo "Using Node.js $(node -v) from $(which node)"
         if ! npm list -g | grep -q '@hashgraph/solo'; then
           echo "⬇️  Installing @hashgraph/solo..."
           npm install -g @hashgraph/solo
@@ -95,8 +123,7 @@ tasks:
           echo "✅ @hashgraph/solo already installed"
         fi
       - echo "🎉 Environment initialization complete!"
-      - task doctor
-  
+
   reset:
     desc: Rollback environment initialization
     silent: true
