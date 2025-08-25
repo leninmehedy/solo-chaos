@@ -30,7 +30,7 @@ task install-chaos-mesh
 ```
 
 ### Kill some of the nodes
-- Run the chaos test to kill some of the nodes (node2,node1):
+- Run the chaos test to kill some of the nodes (node2, node1):
 ```bash
 task chaos:pod:consensus-pod-kill NODE_NAMES=node2,node1
 ```
