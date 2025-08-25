@@ -1,11 +1,15 @@
 version: '3'
 
 includes:
-  build:
+  os:
     taskfile: ./dev/taskfile/Taskfile.{{OS}}.yml
     flatten: true
+    silent: true
+  build:
+    taskfile: ./dev/taskfile/Taskfile.build.yml
+    flatten: true
+    silent: false
 
 dotenv: ['.env', '{{.ENV}}/.env', '{{.HOME}}/.env']
 
-silent: true
 
