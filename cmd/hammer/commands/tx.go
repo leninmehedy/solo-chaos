@@ -110,15 +110,13 @@ func setupClient() error {
 		return errorx.IllegalState.Wrap(err, "error creating client")
 	}
 
-	// Retrieving operator ID from environment variable OPERATOR_ID
 	// operatorAccountID is any account that has some hbar to pay for the transaction fees and we know the private key
-	operatorAccountID, err := hiero.AccountIDFromString(os.Getenv("OPERATOR_ID"))
+	operatorAccountID, err := hiero.AccountIDFromString(config.Get().Operator.Account)
 	if err != nil {
 		return errorx.IllegalState.Wrap(err, "error converting string to operator AccountID")
 	}
 
-	// Retrieving operator key from environment variable OPERATOR_KEY
-	operatorKey, err := hiero.PrivateKeyFromString(os.Getenv("OPERATOR_KEY"))
+	operatorKey, err := hiero.PrivateKeyFromString(config.Get().Operator.Key)
 	if err != nil {
 		return errorx.IllegalState.Wrap(err, "error converting string to operator key")
 	}

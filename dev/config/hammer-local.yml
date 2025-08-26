@@ -1,19 +1,19 @@
 consensusNodes:
   - name: node1
     account: 0.0.3
-    endpoint: localhost:10211
+    endpoint: localhost:30211
   - name: node2
     account: 0.0.4
-    endpoint: localhost:20211
+    endpoint: localhost:30212
   - name: node3
     account: 0.0.5
-    endpoint: localhost:30211
+    endpoint: localhost:30213
   - name: node4
     account: 0.0.6
-    endpoint: localhost:40211
+    endpoint: localhost:30214
   - name: node5
     account: 0.0.7
-    endpoint: localhost:50211
+    endpoint: localhost:30215
 mirrorNodes:
   - name: mirror1
     endpoint: localhost:8080

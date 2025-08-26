@@ -6,6 +6,7 @@ import (
 	hiero "github.com/hiero-ledger/hiero-sdk-go/v2/sdk"
 	"github.com/joomcode/errorx"
 	"github.com/spf13/viper"
+	"os"
 	"strings"
 )
 
@@ -91,6 +92,14 @@ func Initialize(path string) error {
 	for _, m := range cfg.MirrorNodes {
 		logx.As().Debug().Str("name", m.Name).Str("endpoint", m.Endpoint).Msg("Parsing Mirror node info")
 		mirrorNodes[m.Name] = m
+	}
+
+	if cfg.Operator.Account == "" && os.Getenv("OPERATOR_ID") != "" {
+		cfg.Operator.Account = os.Getenv("OPERATOR_ID")
+	}
+
+	if cfg.Operator.Key == "" && os.Getenv("OPERATOR_KEY") != "" {
+		cfg.Operator.Key = os.Getenv("OPERATOR_KEY")
 	}
 
 	return nil
