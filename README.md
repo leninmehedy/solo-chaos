@@ -41,3 +41,12 @@ task chaos:pod:consensus-pod-kill NODE_NAMES=node5
 task chaos:pod:consensus-pod-failure NODE_NAMES=node5 DURATION=60s
 ```
 
+### Deploy the Hammer Job
+- To deploy the solo-chaos-hammer job to your Kubernetes cluster, run:
+```bash
+task deploy-hammer-job 
+```
+- Introduce faults to the network while the hammer job is running. For example, you can kill a node pod (node5) by running:
+```bash
+task chaos:pod:consensus-pod-kill NODE_NAMES=node5
+```

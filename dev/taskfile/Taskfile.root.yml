@@ -223,6 +223,30 @@ tasks:
         else
           echo "✅ No solo-chaos pod found to delete."
         fi
+  deploy-hammer-job:
+    desc: Deploy Solo Chaos Hammer job using solo-chaos-hammer-job.yml (idempotent)
+    cmds:
+      - task destroy-hammer-job
+      - task load-image
+      - |
+        if ! kubectl get job solo-chaos-hammer --namespace {{.SOLO_NAMESPACE}} >/dev/null 2>&1; then
+          echo "🚀 Deploying solo-chaos-hammer job..."
+          kubectl apply -f ../k8s/solo-chaos-hammer-job.yml --namespace {{.SOLO_NAMESPACE}}
+        else
+          echo "✅ solo-chaos-hammer job already exists in namespace {{.SOLO_NAMESPACE}}"
+        fi
+      - kubectl get job solo-chaos-hammer --namespace {{.SOLO_NAMESPACE}}
+  destroy-hammer-job:
+    desc: Destroy the solo-chaos-hammer job (idempotent)
+    cmds:
+      - echo "💣 Destroying solo-chaos-hammer job (if any)..."
+      - |
+        if kubectl get job solo-chaos-hammer --namespace {{.SOLO_NAMESPACE}} >/dev/null 2>&1; then
+          kubectl delete job solo-chaos-hammer --namespace {{.SOLO_NAMESPACE}} --ignore-not-found
+          echo "✅ solo-chaos-hammer job deleted."
+        else
+          echo "✅ No solo-chaos-hammer job found to delete."
+        fi
   refresh-node:
     desc: Refresh a Solo node by running setup and start (idempotent)
     vars:
