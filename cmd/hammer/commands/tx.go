@@ -59,7 +59,7 @@ func runTx(ctx context.Context) {
 		Str("tx-type", flagTxType).
 		Msg("Starting transaction load generation")
 
-	if err := setupClient(); err != nil {
+	if err := setupClient(flagNodes); err != nil {
 		logx.As().Fatal().Err(err).Msg("Failed to setup client")
 	}
 
@@ -132,13 +132,32 @@ func runTx(ctx context.Context) {
 	}
 }
 
-func setupClient() error {
+func setupClient(nodes string) error {
 	if client != nil {
 		return nil
 	}
 
+	network := config.Network()
+
+	// if nodes flag is provided, filter the network settings based on the provided nodes
+	nodeList := strings.Split(nodes, ",")
+	if len(nodeList) > 0 {
+		network = make(map[string]hiero.AccountID)
+		for _, nodeName := range nodeList {
+			node := config.ConsensusNodeInfo(nodeName)
+			if node.Name == "" {
+				return errorx.IllegalArgument.New("node %s not found in config", nodeName)
+			}
+			accountID, err := hiero.AccountIDFromString(node.Account)
+			if err != nil {
+				return errorx.IllegalArgument.Wrap(err, "error converting string to AccountID: %s", node.Account)
+			}
+			network[node.Endpoint] = accountID
+		}
+	}
+
 	var err error
-	client, err = hiero.ClientForNetworkV2(config.Network())
+	client, err = hiero.ClientForNetworkV2(network)
 	if err != nil {
 		return errorx.IllegalState.Wrap(err, "error creating client")
 	}
