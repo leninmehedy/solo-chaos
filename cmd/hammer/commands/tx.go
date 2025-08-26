@@ -170,6 +170,7 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalWorkers int, t
 					return
 				}
 
+				traceId := fmt.Sprintf("tx-crypto-%d", time.Now().UnixNano())
 				logx.As().Info().Int("bot_id", workerId).
 					Any("node", node).
 					Str("mirror_node", mirror).
@@ -177,8 +178,9 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalWorkers int, t
 					Str("interval", tickerDuration.String()).
 					Str("duration", duration).
 					Any("node", node).
+					Str("trace_id", traceId).
 					Msgf("Transferring %d hbar from %v to %s", 1, client.GetOperatorAccountID(), node.Account)
-				if ex := sendCryptoTransaction(workerId, node.Account, 1); ex != nil {
+				if ex := sendCryptoTransaction(workerId, node.Account, 1, traceId); ex != nil {
 					errCh <- errorx.IllegalState.New("totalWorkers %d: failed to send transaction to any node", workerId)
 					return
 				}
@@ -218,7 +220,7 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalWorkers int, t
 	return nil
 }
 
-func sendCryptoTransaction(botId int, toAccount string, amount float64) error {
+func sendCryptoTransaction(botId int, toAccount string, amount float64, traceId string) error {
 	to, err := hiero.AccountIDFromString(toAccount)
 	if err != nil {
 		return errorx.IllegalArgument.Wrap(err, fmt.Sprintf("error converting string to AccountID: %s", toAccount))
@@ -247,6 +249,10 @@ func sendCryptoTransaction(botId int, toAccount string, amount float64) error {
 		Int("worker", botId).
 		Str("to", to.String()).
 		Str("from", client.GetOperatorAccountID().String()).
-		Msgf("Crypto transfer status: %v\n", transactionReceipt.Status)
+		Float64("amount", amount).
+		Str("status", transactionReceipt.Status.String()).
+		Str("transaction_id", transactionResponse.TransactionID.String()).
+		Str("trace_id", traceId).
+		Msgf("Crypto transfer status: %v", transactionReceipt.Status)
 	return nil
 }
