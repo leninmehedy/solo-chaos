@@ -66,12 +66,39 @@ func runTx(ctx context.Context) {
 	var wg sync.WaitGroup
 	var err error
 
+	// compute total tps
+	totalBots := flagBots
+	txReceipts := make(chan int, totalBots)
+	var totalTps float64
+	var totalTime float64
+	var totalTx int64
+	defer close(txReceipts)
+	go func() {
+		start := time.Now()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-txReceipts:
+				totalTx++
+				totalTime = time.Since(start).Seconds()
+				totalTps = math.Round(float64(totalTx) / totalTime)
+				logx.As().Info().
+					Int64("total_tx", totalTx).
+					Float64("total_time_sec", totalTime).
+					Float64("tps", totalTps).
+					Msg("Received a transaction receipt")
+			}
+		}
+	}()
+
+	// start transaction workers based on tx type
 	switch flagTxType {
 	case TxTypeCrypto:
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = startCryptoTxWorkers(ctx, flagNodes, flagBots, flagTps, flagDuration, flagMirror)
+			err = startCryptoTxWorkers(ctx, flagNodes, flagBots, flagTps, flagDuration, flagMirror, txReceipts)
 		}()
 	default:
 		logx.As().Error().Str("tx-type", flagTxType).Msg("Unsupported transaction type")
@@ -84,8 +111,12 @@ func runTx(ctx context.Context) {
 
 	go func() {
 		wg.Wait()
-		logx.As().Info().Msg("All transaction bots completed")
 		cancelFunc()
+		logx.As().Info().
+			Int64("total_tx", totalTx).
+			Float64("total_time_sec", totalTime).
+			Float64("tps", totalTps).
+			Msg("All transaction bots completed")
 	}()
 
 	select {
@@ -127,7 +158,7 @@ func setupClient() error {
 	return nil
 }
 
-func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int, duration, mirror string) error {
+func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int, duration, mirror string, txReceipts chan int) error {
 	d, err := time.ParseDuration(duration)
 	if err != nil {
 		return err
@@ -150,8 +181,6 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int,
 	tickerDuration := time.Second / time.Duration(tps)
 	errCh := make(chan error, totalBots)
 	var wg sync.WaitGroup
-	txReceipts := make(chan int, totalBots)
-	defer close(txReceipts)
 
 	botFunc := func(botId int) {
 		defer wg.Done()
@@ -171,7 +200,7 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int,
 				}
 
 				traceId := fmt.Sprintf("tx-crypto-%d", time.Now().UnixNano())
-			
+
 				logx.As().Info().Int("bot_id", botId).
 					Any("node", node).
 					Str("mirror_node", mirror).
@@ -199,26 +228,6 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int,
 		wg.Add(1)
 		go botFunc(i)
 	}
-
-	go func() {
-		totalTx := int64(0)
-		start := time.Now()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-txReceipts:
-				totalTx++
-				totalTime := time.Since(start).Seconds()
-				totalTps := math.Round(float64(totalTx) / totalTime)
-				logx.As().Info().
-					Int64("total_tx", totalTx).
-					Float64("total_time_sec", totalTime).
-					Float64("tps", totalTps).
-					Msg("Received a transaction receipt")
-			}
-		}
-	}()
 
 	wg.Wait()
 	close(errCh)
