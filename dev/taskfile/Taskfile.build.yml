@@ -6,8 +6,6 @@ vars:
   ARCH: [ amd64, arm64 ]
   GO_VERSION: 1.24.3
   LDFLAGS: "-w -s"
-env:
-  SOLO_CLUSTER_NAME: "${SOLO_CLUSTER_NAME:-kind-solo}"
 tasks:
   clean:
     cmds:

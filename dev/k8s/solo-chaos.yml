@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: solo-chaos-config
+data:
+  hammer.yml: |
+    consensusNodes:
+      - name: node1
+        account: 0.0.3
+        endpoint: network-node1:50211
+      - name: node2
+        account: 0.0.4
+        endpoint: network-node2:50211
+      - name: node3
+        account: 0.0.5
+        endpoint: network-node3:50211
+      - name: node4
+        account: 0.0.6
+        endpoint: network-node4:50211
+      - name: node5
+        account: 0.0.7
+        endpoint: network-node5:50211
+    mirrorNodes:
+      - name: mirror1
+        endpoint: mirror-rest:8080
+    operator:
+      account: 0.0.2
+      key: "302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: solo-chaos
+  labels:
+    app: solo-chaos
+spec:
+  containers:
+    - name: solo-chaos
+      image: solo-chaos:latest
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/bash
+        - -c
+        - while true; do echo "Solo Chaos is running"; sleep 30; done
+      volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+  volumes:
+    - name: config-volume
+      configMap:
+        name: solo-chaos-config
+        items:
+          - key: hammer.yml
+            path: hammer.yml

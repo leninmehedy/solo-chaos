@@ -6,10 +6,11 @@ env:
   SOLO_CLUSTER_SETUP_NAMESPACE: solo-cluster
   SOLO_DEPLOYMENT: solo-deployment
   NODEJS_VERSION: 20.18.0
-  NODES: 5
+  NODES: 4
   RELAY: false
   MIRROR_NODE: false
   HEDERA_EXPLORER: false
+  IMAGE: "solo-chaos:latest"
 
 vars:
   UUID:
@@ -191,5 +192,34 @@ tasks:
         else
           echo "✅ Docker Desktop resources OK: CPUs=$cpus, Mem=$(($mem/1024/1024/1024))GB"
         fi
-    
-  
+  load-image:
+    desc: Load a local Docker image into the Kind cluster
+    vars:
+      IMAGE: "{{.IMAGE}}"
+    cmds:
+      - echo "🚚 Loading image {{.IMAGE}} into Kind cluster {{.SOLO_CLUSTER_NAME}}..."
+      - kind load docker-image "{{.IMAGE}}" -n "{{.SOLO_CLUSTER_NAME}}"
+      - echo "✅ Image {{.IMAGE}} loaded into Kind cluster {{.SOLO_CLUSTER_NAME}}."
+  deploy-solo-chaos:
+    desc: Deploy Solo Chaos pod using solo-chaos.yml (idempotent)
+    cmds:
+      - task load-image
+      - |
+        if ! kubectl get pod solo-chaos --namespace {{.SOLO_NAMESPACE}} >/dev/null 2>&1; then
+          echo "🚀 Deploying solo-chaos pod..."
+          kubectl apply -f ../k8s/solo-chaos.yml --namespace {{.SOLO_NAMESPACE}}
+        else
+          echo "✅ solo-chaos pod already exists in namespace {{.SOLO_NAMESPACE}}"
+        fi
+      - kubectl get pod solo-chaos --namespace {{.SOLO_NAMESPACE}}
+  destroy-solo-chaos:
+    desc: Destroy the solo-chaos pod (idempotent)
+    cmds:
+      - echo "💣 Destroying solo-chaos pod (if any)..."
+      - |
+        if kubectl get pod solo-chaos --namespace {{.SOLO_NAMESPACE}} >/dev/null 2>&1; then
+          kubectl delete pod solo-chaos --namespace {{.SOLO_NAMESPACE}} --ignore-not-found
+          echo "✅ solo-chaos pod deleted."
+        else
+          echo "✅ No solo-chaos pod found to delete."
+        fi

@@ -19,9 +19,9 @@ A reusable sets of chaos tests for solo test network. It can be used to test the
 task setup 
 ```
 
-- Deploy a 5 nodes network
+- Deploy a 4 nodes network
 ```bash 
-task deploy-network NODES=5
+task deploy-network
 ```
 
 - Deploy Chaos Mesh
