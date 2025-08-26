@@ -18,7 +18,9 @@ import (
 	"time"
 )
 
-const TxTypeCrypto = "crypto"
+const (
+	TxTypeCrypto = "crypto"
+)
 
 var client *hiero.Client
 
@@ -31,12 +33,10 @@ var txCmd = &cobra.Command{
 			logx.As().Error().Err(err).Msg("Failed to parse flags")
 			os.Exit(1)
 		}
-
 		if cmd.Context() == nil {
 			logx.As().Error().Msg("Context is nil")
 			os.Exit(1)
 		}
-
 		runTx(cmd.Context())
 	},
 }
@@ -45,12 +45,11 @@ func runTx(ctx context.Context) {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
-	// Initialize configuration
 	if err := config.Initialize(flagConfig); err != nil {
 		logx.As().Fatal().Err(err).Msg("Failed to initialize config")
 	}
 	logx.As().Info().Msg("Configuration initialized")
-	// Here you can add the logic to create and send transactions based on the flags
+
 	logx.As().Info().
 		Str("nodes", flagNodes).
 		Int("total_bots", flagBots).
@@ -60,27 +59,28 @@ func runTx(ctx context.Context) {
 		Str("tx-type", flagTxType).
 		Msg("Starting transaction load generation")
 
-	// setup client
-	err := setupClient()
-	if err != nil {
+	if err := setupClient(); err != nil {
 		logx.As().Fatal().Err(err).Msg("Failed to setup client")
 	}
 
 	var wg sync.WaitGroup
-	// based on the transaction type, create different types of transactions
+	var err error
+
 	switch flagTxType {
 	case TxTypeCrypto:
 		wg.Add(1)
-		err := startCryptoTxWorkers(ctx, flagNodes, flagBots, flagTps, flagDuration, flagMirror)
-		wg.Done()
-		if err != nil {
-			logx.As().Error().Err(err).Msg("Failed to create crypto transactions")
-			os.Exit(1)
-		}
+		go func() {
+			defer wg.Done()
+			err = startCryptoTxWorkers(ctx, flagNodes, flagBots, flagTps, flagDuration, flagMirror)
+		}()
 	default:
 		logx.As().Error().Str("tx-type", flagTxType).Msg("Unsupported transaction type")
 		os.Exit(1)
 	}
+
+	// Graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		wg.Wait()
@@ -88,15 +88,16 @@ func runTx(ctx context.Context) {
 		cancelFunc()
 	}()
 
-	// Handle OS signals for graceful shutdown
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
 	select {
 	case <-sigCh:
 		logx.As().Trace().Msg("Received exit signal, stopping pipelines...")
 		cancelFunc()
 	case <-ctx.Done():
+	}
+
+	if err != nil {
+		logx.As().Error().Err(err).Msg("Transaction workers failed")
+		os.Exit(1)
 	}
 }
 
@@ -111,7 +112,6 @@ func setupClient() error {
 		return errorx.IllegalState.Wrap(err, "error creating client")
 	}
 
-	// operatorAccountID is any account that has some hbar to pay for the transaction fees and we know the private key
 	operatorAccountID, err := hiero.AccountIDFromString(config.Get().Operator.Account)
 	if err != nil {
 		return errorx.IllegalState.Wrap(err, "error converting string to operator AccountID")
@@ -122,13 +122,12 @@ func setupClient() error {
 		return errorx.IllegalState.Wrap(err, "error converting string to operator key")
 	}
 
-	// Setting the client operator ID and key
 	client.SetOperator(operatorAccountID, operatorKey)
 
 	return nil
 }
 
-func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots int, tps int, duration string, mirror string) error {
+func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int, duration, mirror string) error {
 	d, err := time.ParseDuration(duration)
 	if err != nil {
 		return err
@@ -149,10 +148,9 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots int, tps 
 		Msg("Starting crypto transaction bots")
 
 	tickerDuration := time.Second / time.Duration(tps)
-	errCh := make(chan error, totalBots) // Buffered channel to avoid blocking
+	errCh := make(chan error, totalBots)
 	var wg sync.WaitGroup
-
-	txReceipts := make(chan int)
+	txReceipts := make(chan int, totalBots)
 	defer close(txReceipts)
 
 	botFunc := func(botId int) {
@@ -161,31 +159,30 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots int, tps 
 		timer := time.NewTimer(d)
 		defer ticker.Stop()
 		defer timer.Stop()
-
 		counter := int64(0)
-
 		for {
 			select {
 			case <-ticker.C:
 				nodeName := nodesList[rand.Intn(len(nodesList))]
 				node := config.ConsensusNodeInfo(nodeName)
 				if node.Name == "" {
-					errCh <- errorx.IllegalState.New("totalBots %d: node %s not found in config", botId, nodeName)
+					errCh <- errorx.IllegalState.New("bot %d: node %s not found in config", botId, nodeName)
 					return
 				}
 
 				traceId := fmt.Sprintf("tx-crypto-%d", time.Now().UnixNano())
+			
 				logx.As().Info().Int("bot_id", botId).
 					Any("node", node).
 					Str("mirror_node", mirror).
 					Int64("tx_total", counter).
 					Str("interval", tickerDuration.String()).
 					Str("duration", duration).
-					Any("node", node).
 					Str("trace_id", traceId).
 					Msgf("Transferring %d hbar from %v to %s", 1, client.GetOperatorAccountID(), node.Account)
+
 				if ex := sendCryptoTransaction(botId, node.Account, 1, traceId, txReceipts); ex != nil {
-					errCh <- errorx.IllegalState.New("botId %d: failed to send transaction", botId)
+					errCh <- errorx.IllegalState.New("bot %d: failed to send transaction: %v", botId, ex)
 					return
 				}
 
@@ -198,7 +195,6 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots int, tps 
 		}
 	}
 
-	// Start totalBots pool
 	for i := 0; i < totalBots; i++ {
 		wg.Add(1)
 		go botFunc(i)
@@ -224,22 +220,18 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots int, tps 
 		}
 	}()
 
-	// Wait for all bots to finish
 	wg.Wait()
 	close(errCh)
 
-	// Collect errors
 	var errs []error
 	for e := range errCh {
 		if e != nil {
 			errs = append(errs, e)
 		}
 	}
-
 	if len(errs) > 0 {
 		return errorx.IllegalState.New("one or more bots failed, errors: %v", errs)
 	}
-
 	return nil
 }
 
@@ -250,20 +242,15 @@ func sendCryptoTransaction(botId int, toAccount string, amount float64, traceId 
 	}
 
 	transactionResponse, err := hiero.NewTransferTransaction().
-		// Hbar has to be negated to denote we are taking out from that account
 		AddHbarTransfer(client.GetOperatorAccountID(), hiero.NewHbar(-1*amount)).
-		// If the amount of these 2 transfers is not the same, the transaction will throw an error
 		AddHbarTransfer(to, hiero.NewHbar(amount)).
 		SetTransactionMemo(fmt.Sprintf("hammer - bot %d", botId)).
 		Execute(client)
-
 	if err != nil {
 		return errorx.IllegalState.Wrap(err, "error creating transaction")
 	}
 
-	// Retrieve the receipt to make sure the transaction went through
 	transactionReceipt, err := transactionResponse.GetReceipt(client)
-
 	if err != nil {
 		return errorx.IllegalState.Wrap(err, "error retrieving transfer receipt")
 	}
@@ -277,6 +264,9 @@ func sendCryptoTransaction(botId int, toAccount string, amount float64, traceId 
 		Str("transaction_id", transactionResponse.TransactionID.String()).
 		Str("trace_id", traceId).
 		Msgf("Crypto transfer status: %v", transactionReceipt.Status)
+
+	// add tx receipt count for TPS calculation
 	txReceipts <- 1
+
 	return nil
 }
