@@ -4,7 +4,7 @@ metadata:
   name: solo-chaos-pod-failure-${UUID}
   namespace: chaos-mesh
 spec:
-  action: pod-kill
+  action: pod-failure
   mode: all
   duration: ${DURATION}
   selector:
