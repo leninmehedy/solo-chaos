@@ -6,7 +6,7 @@ env:
   SOLO_CLUSTER_SETUP_NAMESPACE: solo-cluster
   SOLO_DEPLOYMENT: solo-deployment
   NODEJS_VERSION: 20.18.0
-  NODES: 4
+  NODES: 5
   RELAY: false
   MIRROR_NODE: false
   HEDERA_EXPLORER: false
