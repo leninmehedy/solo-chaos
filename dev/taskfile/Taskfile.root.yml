@@ -223,3 +223,18 @@ tasks:
         else
           echo "✅ No solo-chaos pod found to delete."
         fi
+  refresh-node:
+    desc: Refresh a Solo node by running setup and start (idempotent)
+    vars:
+      NODE: "{{.NODE}}"
+    cmds:
+      - echo "🔄 Refreshing Solo node {{.NODE}}..."
+      - |
+        bash -c "
+        if [ -z '{{.NODE}}' ]; then
+          echo '❌ NODE variable is required. Usage: task refresh-node -- NODE=node1'
+          exit 1
+        fi
+        " 
+        solo node setup --deployment "{{.SOLO_DEPLOYMENT}}" -i {{.NODE}}
+        solo node start --deployment "{{.SOLO_DEPLOYMENT}}" -i {{.NODE}}
