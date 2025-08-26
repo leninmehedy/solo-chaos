@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-// hammer tx crypto --nodes "node1,node2" --mirror-node mirror:80 --worker 100 --duration 10s --tps 10 // Total TPS = 100 * 10 = 1000
-// hammer tx crypto --config local.yml --worker 1000 --duration 10s --tps 100
+// hammer tx crypto --nodes "node1,node2" --mirror-node mirror:80 --bots 100 --duration 10s --tps 10 // Total TPS = 100 * 10 = 1000
+// hammer tx crypto --config local.yml --bots 1000 --duration 10s --tps 100
 
 func main() {
 	err := commands.Execute()

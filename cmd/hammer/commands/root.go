@@ -10,13 +10,13 @@ import (
 
 var (
 	// Used for flags.
-	flagConfig       string
-	flagNodes        string
-	flagTotalWorkers int
-	flagTps          int
-	flagDuration     string
-	flagMirror       string
-	flagTxType       string
+	flagConfig   string
+	flagNodes    string
+	flagBots     int
+	flagTps      int
+	flagDuration string
+	flagMirror   string
+	flagTxType   string
 
 	rootCmd = &cobra.Command{
 		Use:   "hammer",
@@ -35,8 +35,8 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&flagConfig, "config", "c", "", "config file path (required)")
 	rootCmd.PersistentFlags().StringVarP(&flagNodes, "nodes", "n", "node1,node2,node3", "comma separated list of node names to connect")
-	rootCmd.PersistentFlags().IntVarP(&flagTotalWorkers, "workers", "w", 1, "number of worker")
-	rootCmd.PersistentFlags().IntVarP(&flagTps, "tps", "t", 10, "tps per worker")
+	rootCmd.PersistentFlags().IntVarP(&flagBots, "bots", "b", 100, "number of bots to create transactions")
+	rootCmd.PersistentFlags().IntVarP(&flagTps, "tps", "t", 1, "tps per worker")
 	rootCmd.PersistentFlags().StringVarP(&flagDuration, "duration", "d", "60s", "duration of the test")
 	rootCmd.PersistentFlags().StringVarP(&flagMirror, "mirror-node", "m", "", "mirror node name to connect")
 	rootCmd.PersistentFlags().StringVarP(&flagTxType, "tx-type", "", "crypto", "transaction type (crypto, file, contract)")
