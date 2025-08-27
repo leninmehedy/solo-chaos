@@ -15,7 +15,7 @@ tasks:
       - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
       - envsubst < ../../chaos/pod/consensus-node-failure.yml | kubectl apply -f -
       - echo "✅ Pod Failure Chaos experiments applied."
-      - task chaos:show-experiment-status NAME="solo-chaos-pod-failure-{{.UUID}}"
+      - task chaos:show-experiment-status NAME="solo-chaos-pod-failure-{{.UUID}}" TYPE="PodChaos"
     env:
       NAMESPACE: "{{.NAMESPACE}}"
       NODE_NAMES: "{{.NODE_NAMES}}"
@@ -32,7 +32,7 @@ tasks:
       - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
       - envsubst < ../../chaos/pod/consensus-node-kill.yml | kubectl apply -f -
       - echo "✅ Pod Kill Chaos experiments applied."
-      - task chaos:show-experiment-status NAME="solo-chaos-pod-kill-{{.UUID}}"
+      - task chaos:show-experiment-status NAME="solo-chaos-pod-kill-{{.UUID}}" TYPE="PodChaos"
     env:
       NAMESPACE: "{{.NAMESPACE}}"
       NODE_NAMES: "{{.NODE_NAMES}}"

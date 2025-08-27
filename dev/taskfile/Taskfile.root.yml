@@ -78,7 +78,13 @@ tasks:
         kubectl get ns chaos-mesh >/dev/null 2>&1 || kubectl create ns chaos-mesh
       - |
         if ! helm status chaos-mesh -n chaos-mesh >/dev/null 2>&1; then
-          helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh --version 2.7.2
+          helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh \
+            --version 2.7.2 \
+            --set chaosDaemon.runtime=containerd \
+            --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
+            --set chaosDaemon.hostPID=true \
+            --set chaosDaemon.privileged=true \
+            --set chaosDaemon.mountHostLibModules=true
         fi
       - kubectl get pods --namespace chaos-mesh -l app.kubernetes.io/instance=chaos-mesh || true
       - |

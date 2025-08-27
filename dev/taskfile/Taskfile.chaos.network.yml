@@ -1,0 +1,27 @@
+version: '3'
+
+# Taskfile.root.yml contains environment variables and other variables
+# Taskfile.chaos.yml contains the chaos-related common tasks
+
+tasks:
+  consensus-network-bandwidth:
+    desc: Run Network Chaos experiments (limited bandwidth)
+    vars:
+      NAMESPACE: "{{.SOLO_NAMESPACE}}"
+      NODE_NAMES: "{{.NODE_NAMES}}"
+      RATE: '{{.RATE | default "1gbps"}}'
+      LIMIT: '{{.LIMIT | default 20971520}}'
+      BUFFER: '{{.BUFFER | default 102400}}'
+    cmds:
+      - echo "🔄 Running Network Bandwidth Chaos experiments..."
+      - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
+      - envsubst < ../../chaos/network/consensus-node-bandwidth.yml | kubectl apply -f -
+      - echo "✅ Network Bandwidth Chaos experiments applied."
+      - task chaos:show-experiment-status NAME="solo-chaos-network-bandwidth-{{.UUID}}" TYPE="NetworkChaos"
+    env:
+      NAMESPACE: "{{.NAMESPACE}}"
+      NODE_NAMES: "{{.NODE_NAMES}}"
+      RATE: "{{.RATE}}"
+      LIMIT: "{{.LIMIT}}"
+      BUFFER: "{{.BUFFER}}"
+      UUID: "{{.UUID}}"

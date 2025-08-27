@@ -14,9 +14,11 @@ tasks:
       - task check-docker
       - |
         echo "🔍 Checking required CLI tools..."
-        for cmd in docker kubectl k9s kind helm jq kubectx; do
+        for cmd in docker kubectl k9s kind helm jq kubectx envsubst; do
           if ! command -v $cmd >/dev/null 2>&1; then
             echo "❌ Missing: $cmd"
+            echo "👉 Please, run: task setup"
+            exit 1
           else
             echo "✅ $cmd found: $(command -v $cmd)"
           fi
@@ -37,6 +39,8 @@ tasks:
           source \"$NVM_DIR/nvm.sh\"
           if ! command -v nvm >/dev/null 2>&1; then
             echo '❌ NVM not installed'
+            echo "👉 Please, run: task setup"
+            exit 1
           else
             echo '✅ NVM installed'
             if ! nvm ls {{.NODEJS_VERSION}} | grep -q '{{.NODEJS_VERSION}}'; then
@@ -83,6 +87,12 @@ tasks:
             echo "✅ $cmd already installed"
           fi
         done
+        if ! command -v envsubst &> /dev/null; then
+          echo "⬇️  Installing gettext (for envsubst)..."
+          brew install gettext
+        else
+          echo "✅ gettext already installed"
+        fi
       - |
         echo "🔍 Checking NVM..."
         export NVM_DIR="$HOME/.nvm"
