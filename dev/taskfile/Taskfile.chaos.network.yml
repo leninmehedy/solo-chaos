@@ -29,7 +29,7 @@ tasks:
   consensus-network-netem:
     desc: Run Network Chaos experiments (network emulation)
     vars:
-      NAMESPACE: "{{.SOLO_NAMESPACE}}"
+      NAMESPACE: "{{.NAMESPACE | default .SOLO_NAMESPACE}}"
     cmds:
       - echo "🔄 Running Network Bandwidth Chaos experiments..."
       - echo "NAMESPACE=${NAMESPACE}, UUID=${UUID}"
