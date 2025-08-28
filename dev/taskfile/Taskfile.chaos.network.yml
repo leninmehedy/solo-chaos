@@ -10,8 +10,8 @@ tasks:
       NAMESPACE: "{{.SOLO_NAMESPACE}}"
       NODE_NAMES: "{{.NODE_NAMES}}"
       RATE: '{{.RATE | default "1gbps"}}'
-      LIMIT: '{{.LIMIT | default 20971520}}'
-      BUFFER: '{{.BUFFER | default 102400}}'
+      LIMIT: '{{.LIMIT | default 20971520}}'   # LIMIT in bytes (20MB)
+      BUFFER: '{{.BUFFER | default 102400}}'   # BUFFER in bytes (100KB)
     cmds:
       - echo "🔄 Running Network Bandwidth Chaos experiments..."
       - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
