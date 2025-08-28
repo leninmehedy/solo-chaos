@@ -42,6 +42,11 @@ task chaos:pod:consensus-pod-failure NODE_NAMES=node5 DURATION=60s
 ```
 
 ### Deploy the Hammer Job
+- To deploy the image, run:
+```bash
+task build:image
+```
+
 - To deploy the solo-chaos-hammer job to your Kubernetes cluster, run:
 ```bash
 task deploy-hammer-job 

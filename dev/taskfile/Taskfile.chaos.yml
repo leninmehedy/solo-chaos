@@ -3,12 +3,14 @@ version: '3'
 includes:
   pod:
     taskfile: Taskfile.chaos.pod.yml
-
+  network:
+    taskfile: Taskfile.chaos.network.yml
 tasks:
   show-experiment-status:
     desc: Show the status of the pod chaos experiment
     vars:
       NAME: "{{.NAME}}"
+      TYPE: "{{.TYPE}}"
     cmds:
-      - echo "🔍 Fetching PodChaos status..."
-      - kubectl get events --field-selector involvedObject.kind=PodChaos,involvedObject.name={{.NAME}} -n chaos-mesh
+      - echo "🔍 Fetching {{.TYPE}} status..."
+      - kubectl get events --field-selector involvedObject.kind={{.TYPE}},involvedObject.name={{.NAME}} -n chaos-mesh
