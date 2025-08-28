@@ -1,7 +1,7 @@
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: solo-chaos-network-netem-800ms-{{.UUID}}
+  name: solo-chaos-network-netem-800ms-${UUID}
   namespace: chaos-mesh
 spec:
   action: netem
@@ -11,7 +11,7 @@ spec:
       - ${NAMESPACE}
     labelSelectors:
       'solo.hedera.com/type': 'network-node'
-      'solo.hedera.com/latency': ''
+      'solo.hedera.com/latency': '800ms'
   delay:
     latency: '800ms'
     correlation: '80'

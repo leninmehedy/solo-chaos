@@ -59,7 +59,7 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: cluster-diagnostics-svc
+  name: node1-svc
   namespace: cluster-diagnostics
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-internal: "true"
@@ -69,6 +69,88 @@ metadata:
 spec:
   selector:
     app: cluster-diagnostics
+    solo.hedera.com/node-name: 'node1'
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ports:
+    - name: socat
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: iperf3
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node2-svc
+  namespace: cluster-diagnostics
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  selector:
+    app: cluster-diagnostics
+    solo.hedera.com/node-name: 'node2'
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ports:
+    - name: socat
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: iperf3
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node3-svc
+  namespace: cluster-diagnostics
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  selector:
+    app: cluster-diagnostics
+    solo.hedera.com/node-name: 'node3'
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ports:
+    - name: socat
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: iperf3
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node4-svc
+  namespace: cluster-diagnostics
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  selector:
+    app: cluster-diagnostics
+    solo.hedera.com/node-name: 'node4'
   type: LoadBalancer
   externalTrafficPolicy: Cluster
   internalTrafficPolicy: Cluster
@@ -129,7 +211,9 @@ spec:
         metadata:
           labels:
             app: cluster-diagnostics
-            region: us
+            solo.hedera.com/node-name: 'node1'
+            solo.hedera.com/type: 'network-node'
+            solo.hedera.com/region: 'ap'
         spec:
           serviceAccountName: cluster-diagnostics-sa
           automountServiceAccountToken: true
@@ -156,18 +240,20 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-diagnosticss-node2
+  name: cluster-diagnostics-node2
   namespace: cluster-diagnostics
 spec:
     replicas: 1
     selector:
       matchLabels:
         app: cluster-diagnostics
-        region: eu
     template:
         metadata:
           labels:
             app: cluster-diagnostics
+            solo.hedera.com/node-name: 'node2'
+            solo.hedera.com/type: 'network-node'
+            solo.hedera.com/region: 'eu'
         spec:
           serviceAccountName: cluster-diagnostics-sa
           automountServiceAccountToken: true
@@ -194,7 +280,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-diagnosticss-node3
+  name: cluster-diagnostics-node3
   namespace: cluster-diagnostics
 spec:
     replicas: 1
@@ -205,7 +291,9 @@ spec:
         metadata:
           labels:
             app: cluster-diagnostics
-            region: apac
+            solo.hedera.com/node-name: 'node3'
+            solo.hedera.com/type: 'network-node'
+            solo.hedera.com/region: 'us'
         spec:
           serviceAccountName: cluster-diagnostics-sa
           automountServiceAccountToken: true
@@ -228,3 +316,43 @@ spec:
             - name: entrypoint
               configMap:
                 name: cluster-diagnostics-cm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-diagnostics-node4
+  namespace: cluster-diagnostics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-diagnostics
+  template:
+    metadata:
+      labels:
+        app: cluster-diagnostics
+        solo.hedera.com/node-name: 'node4'
+        solo.hedera.com/type: 'network-node'
+        solo.hedera.com/latency: '800ms'
+    spec:
+      serviceAccountName: cluster-diagnostics-sa
+      automountServiceAccountToken: true
+      containers:
+        - name: cluster-diagnostics
+          image: debian:bookworm-20250811-slim
+          command: ["/bin/bash", "/app/entrypoint.sh"]
+          volumeMounts:
+            - name: entrypoint
+              mountPath: /app/entrypoint.sh
+              subPath: entrypoint.sh
+          ports:
+            - containerPort: 8080
+              name: socat
+              protocol: TCP
+            - containerPort: 8081
+              name: iperf3
+              protocol: TCP
+      volumes:
+        - name: entrypoint
+          configMap:
+            name: cluster-diagnostics-cm

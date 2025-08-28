@@ -1,7 +1,7 @@
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: solo-chaos-network-netem-ap-melbourne-{{.UUID}}
+  name: solo-chaos-network-netem-ap-melbourne-${UUID}
   namespace: chaos-mesh
 spec:
   action: netem

@@ -35,7 +35,7 @@ tasks:
       - echo "NAMESPACE=${NAMESPACE}, UUID=${UUID}"
       - envsubst < ../../chaos/network/netem-800ms.yml | kubectl apply -f -
       - envsubst < ../../chaos/network/netem-ap-melbourne.yml | kubectl apply -f -
-      - envsubst < ../../chaos/network/netem-eu-london.ymll | kubectl apply -f -
+      - envsubst < ../../chaos/network/netem-eu-london.yml | kubectl apply -f -
       - envsubst < ../../chaos/network/netem-us-ohio.yml | kubectl apply -f -
       - echo "✅ Netem Bandwidth Chaos experiments applied."
       - task chaos:show-experiment-status NAME="solo-chaos-network-netem-800ms-{{.UUID}}" TYPE="NetworkChaos"
