@@ -56,23 +56,18 @@ data:
     ${SUDO} socat -lh -lu -v TCP4-LISTEN:8080,fork EXEC:cat & 
     exec sleep infinity
 ---
+# Headless service for direct pod access (ping, iperf3, etc.)
 apiVersion: v1
 kind: Service
 metadata:
   name: node1-svc
   namespace: cluster-diagnostics
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
-    networking.gke.io/load-balancer-type: "Internal"
 spec:
   selector:
     app: cluster-diagnostics
     solo.hedera.com/node-name: 'node1'
-  type: LoadBalancer
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  clusterIP: None
   ports:
     - name: socat
       port: 8080
@@ -82,24 +77,20 @@ spec:
       port: 8081
       targetPort: 8081
       protocol: TCP
+
 ---
+# Headless service for direct pod access (ping, iperf3, etc.)
 apiVersion: v1
 kind: Service
 metadata:
   name: node2-svc
   namespace: cluster-diagnostics
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
-    networking.gke.io/load-balancer-type: "Internal"
 spec:
   selector:
     app: cluster-diagnostics
     solo.hedera.com/node-name: 'node2'
-  type: LoadBalancer
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  clusterIP: None
   ports:
     - name: socat
       port: 8080
@@ -109,24 +100,20 @@ spec:
       port: 8081
       targetPort: 8081
       protocol: TCP
+
 ---
+# Headless service for direct pod access (ping, iperf3, etc.)
 apiVersion: v1
 kind: Service
 metadata:
   name: node3-svc
   namespace: cluster-diagnostics
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
-    networking.gke.io/load-balancer-type: "Internal"
 spec:
   selector:
     app: cluster-diagnostics
     solo.hedera.com/node-name: 'node3'
-  type: LoadBalancer
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  clusterIP: None
   ports:
     - name: socat
       port: 8080
@@ -136,24 +123,20 @@ spec:
       port: 8081
       targetPort: 8081
       protocol: TCP
+
 ---
+# Headless service for direct pod access (ping, iperf3, etc.)
 apiVersion: v1
 kind: Service
 metadata:
   name: node4-svc
   namespace: cluster-diagnostics
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
-    networking.gke.io/load-balancer-type: "Internal"
 spec:
   selector:
     app: cluster-diagnostics
     solo.hedera.com/node-name: 'node4'
-  type: LoadBalancer
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  clusterIP: None
   ports:
     - name: socat
       port: 8080
@@ -163,6 +146,7 @@ spec:
       port: 8081
       targetPort: 8081
       protocol: TCP
+
 ---
 apiVersion: v1
 kind: ServiceAccount
