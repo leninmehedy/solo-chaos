@@ -1,0 +1,230 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cluster-diagnostics
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-diagnostics-cm
+  namespace: cluster-diagnostics
+data:
+  entrypoint.sh: |
+    #!/usr/bin/env bash
+    set -eo pipefail
+    
+    uid="$(id -u)"
+    
+    SUDO=""
+    if [[ "${uid}" -ne 0 ]]; then
+      if ! command -v sudo >/dev/null 2>&1; then
+        echo "FATAL: sudo is required to run this script as a non-root user"
+        exit 1
+      fi
+      
+      SUDO="$(command -v sudo)"
+    fi
+    
+    export DEBIAN_FRONTEND=noninteractive
+    
+    ${SUDO} apt update
+    ${SUDO} apt upgrade -y
+    ${SUDO} apt install -y curl ca-certificates jq netcat-traditional \
+      dnsutils iperf3 iputils-ping iproute2 tcpdump iputils-tracepath socat
+    
+    export ARCH="$(uname -m)"
+    case "${ARCH}" in
+      x86_64|amd64)
+        ARCH="amd64"
+        ;;
+      aarch64|arm64)
+        ARCH="arm64"
+        ;;
+      *)
+        echo "FATAL: Unsupported architecture: ${ARCH}"
+        exit 1
+        ;;
+    esac
+    
+    ${SUDO} curl -Lo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
+    ${SUDO} chmod +x /usr/local/bin/kubectl
+    
+    [[ -d /app ]] || ${SUDO} mkdir -p /app
+    
+    ${SUDO} iperf3 -p 8081 -s --timestamps &
+    ${SUDO} socat -lh -lu -v TCP4-LISTEN:8080,fork EXEC:cat & 
+    exec sleep infinity
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-diagnostics-svc
+  namespace: cluster-diagnostics
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  selector:
+    app: cluster-diagnostics
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ports:
+    - name: socat
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: iperf3
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-diagnostics-sa
+  namespace: cluster-diagnostics
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-diagnostics-role
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-diagnostics-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-diagnostics-role
+subjects:
+  - kind: ServiceAccount
+    name: cluster-diagnostics-sa
+    namespace: cluster-diagnostics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-diagnostics-node1
+  namespace: cluster-diagnostics
+spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: cluster-diagnostics
+    template:
+        metadata:
+          labels:
+            app: cluster-diagnostics
+            region: us
+        spec:
+          serviceAccountName: cluster-diagnostics-sa
+          automountServiceAccountToken: true
+          containers:
+            - name: cluster-diagnostics
+              image: debian:bookworm-20250811-slim
+              command: ["/bin/bash", "/app/entrypoint.sh"]
+              volumeMounts:
+                - name: entrypoint
+                  mountPath: /app/entrypoint.sh
+                  subPath: entrypoint.sh
+              ports:
+                - containerPort: 8080
+                  name: socat
+                  protocol: TCP
+                - containerPort: 8081
+                  name: iperf3
+                  protocol: TCP
+          volumes:
+            - name: entrypoint
+              configMap:
+                name: cluster-diagnostics-cm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-diagnosticss-node2
+  namespace: cluster-diagnostics
+spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: cluster-diagnostics
+        region: eu
+    template:
+        metadata:
+          labels:
+            app: cluster-diagnostics
+        spec:
+          serviceAccountName: cluster-diagnostics-sa
+          automountServiceAccountToken: true
+          containers:
+            - name: cluster-diagnostics
+              image: debian:bookworm-20250811-slim
+              command: ["/bin/bash", "/app/entrypoint.sh"]
+              volumeMounts:
+                - name: entrypoint
+                  mountPath: /app/entrypoint.sh
+                  subPath: entrypoint.sh
+              ports:
+                - containerPort: 8080
+                  name: socat
+                  protocol: TCP
+                - containerPort: 8081
+                  name: iperf3
+                  protocol: TCP
+          volumes:
+            - name: entrypoint
+              configMap:
+                name: cluster-diagnostics-cm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-diagnosticss-node3
+  namespace: cluster-diagnostics
+spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: cluster-diagnostics
+    template:
+        metadata:
+          labels:
+            app: cluster-diagnostics
+            region: apac
+        spec:
+          serviceAccountName: cluster-diagnostics-sa
+          automountServiceAccountToken: true
+          containers:
+            - name: cluster-diagnostics
+              image: debian:bookworm-20250811-slim
+              command: ["/bin/bash", "/app/entrypoint.sh"]
+              volumeMounts:
+                - name: entrypoint
+                  mountPath: /app/entrypoint.sh
+                  subPath: entrypoint.sh
+              ports:
+                - containerPort: 8080
+                  name: socat
+                  protocol: TCP
+                - containerPort: 8081
+                  name: iperf3
+                  protocol: TCP
+          volumes:
+            - name: entrypoint
+              configMap:
+                name: cluster-diagnostics-cm
