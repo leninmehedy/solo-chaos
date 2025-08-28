@@ -19,4 +19,4 @@ mirrorNodes:
     endpoint: localhost:8080
 operator:
   account: 0.0.2
-  key: "302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137"
+  key: "302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137" # use the default operator key https://github.com/hiero-ledger/solo/blob/main/docs/site/content/en/docs/faq.md?plain=1#L25
