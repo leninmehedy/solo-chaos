@@ -1,5 +1,13 @@
 version: '3'
 
+env:
+  SOLO_NAMESPACE: '{{.SOLO_NAMESPACE | default "solo"}}'
+  SOLO_CLUSTER_NAME: '{{.SOLO_CLUSTER_NAME | default "solo"}}'
+
+vars:
+  UUID:
+    sh: uuidgen | tr -d '-' | head -c 8 | tr '[:upper:]' '[:lower:]'
+
 includes:
   pod:
     taskfile: Taskfile.chaos.pod.yml

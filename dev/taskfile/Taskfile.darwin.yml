@@ -5,7 +5,7 @@ includes:
     taskfile: Taskfile.root.yml
     flatten: true
   chaos:
-    taskfile: Taskfile.chaos.yml
+    taskfile: ../../chaos/Taskfile.yml
 
 tasks:
   doctor:
