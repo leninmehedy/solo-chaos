@@ -266,7 +266,7 @@ func startCryptoTxWorkers(ctx context.Context, nodes string, totalBots, tps int,
 func sendCryptoTransaction(botId int, toAccount string, amount float64, traceId string, txReceipts chan int) error {
 	to, err := hiero.AccountIDFromString(toAccount)
 	if err != nil {
-		return errorx.IllegalArgument.Wrap(err, fmt.Sprintf("error converting string to AccountID: %s", toAccount))
+		return errorx.IllegalArgument.Wrap(err, "error converting string to AccountID: %s", toAccount)
 	}
 
 	transactionResponse, err := hiero.NewTransferTransaction().
