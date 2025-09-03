@@ -88,6 +88,26 @@ This applies multiple network emulation scenarios:
 - EU London network conditions  
 - US Ohio network conditions
 
+#### Network partition by region
+Run network partition chaos tests to simulate network partitioning between nodes in different regions:
+```bash
+task chaos:network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
+```
+
+Examples of region-based partitioning:
+```bash
+# Partition between US East and EU West regions
+task chaos:network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
+
+# Partition between different AWS regions  
+task chaos:network:network-partition-by-region SOURCE_REGION=us-west-2 TARGET_REGION=ap-southeast-1
+
+# Partition between US regions
+task chaos:network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=us-west-2
+```
+
+This creates bidirectional network partitions between nodes based on their `solo.hedera.com/region` labels, simulating scenarios where network connectivity is lost between different geographical regions.
+
 ### Hammer Job Testing
 
 #### Deploy the Hammer Job
@@ -120,6 +140,7 @@ task --list
 # Run specific chaos tests with simplified names
 task pod:consensus-pod-kill NODE_NAMES=node5
 task network:consensus-network-netem
+task network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
 task show-experiment-status NAME=<experiment-name> TYPE=<PodChaos|NetworkChaos>
 ```
 
@@ -128,6 +149,7 @@ task show-experiment-status NAME=<experiment-name> TYPE=<PodChaos|NetworkChaos>
 * show-experiment-status:                    Show the status of the pod chaos experiment
 * network:consensus-network-bandwidth:       Run Network Chaos experiments (limited bandwidth)
 * network:consensus-network-netem:           Run Network Chaos experiments (network emulation)
+* network:network-partition-by-region:       Run Network Chaos partition experiments between regions
 * pod:consensus-pod-failure:                 Run Pod Chaos experiments (failure)
 * pod:consensus-pod-kill:                    Run Pod Chaos experiments (kill)
 ```
@@ -150,6 +172,7 @@ Run `task --list` to see all available tasks:
 ### Network Chaos Tasks  
 - `task chaos:network:consensus-network-bandwidth` - Limit network bandwidth
 - `task chaos:network:consensus-network-netem` - Apply network emulation for different latencies
+- `task chaos:network:network-partition-by-region` - Create network partitions between regions
 
 ### Utility Tasks
 - `task chaos:show-experiment-status` - Show chaos experiment status
