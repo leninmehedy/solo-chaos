@@ -13,6 +13,8 @@ tasks:
       LIMIT: '{{.LIMIT | default 20971520}}'   # LIMIT in bytes (20MB)
       BUFFER: '{{.BUFFER | default 102400}}'   # BUFFER in bytes (100KB)
     cmds:
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace --require-node-names"
       - echo "🔄 Running Network Bandwidth Chaos experiments..."
       - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
       - envsubst < {{.TASKFILE_DIR}}/network/consensus-node-bandwidth.yml | kubectl apply -f -
@@ -31,6 +33,8 @@ tasks:
     vars:
       NAMESPACE: "{{.NAMESPACE | default .SOLO_NAMESPACE}}"
     cmds:
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace"
       - echo "🔄 Running Network Latency Chaos experiments with global RTT emulation..."
       - echo "NAMESPACE=${NAMESPACE}"
       - echo "Applying region-based latency - us<->us 20ms RTT, us<->eu 100ms RTT, us<->ap 200ms RTT, eu<->eu 20ms RTT, eu<->ap 300ms RTT, ap<->ap 20ms RTT"
@@ -51,12 +55,13 @@ tasks:
       - task show-experiment-status NAME="solo-chaos-network-netem-us-to-ap" TYPE="NetworkChaos"
     env:
       NAMESPACE: "{{.NAMESPACE}}"
-
   deploy-cluster-diagnostics:
     desc: Deploy cluster diagnostics pods
     vars:
       REGION: "{{.REGION | default \"us\"}}"
     cmds:
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-region"
       - echo "🧹 Cleaning up existing NetworkChaos experiments..."
       - task network:cleanup-networkchaos
       - echo "🚀 Deploying cluster diagnostics pods with region={{.REGION}}..."
@@ -72,25 +77,46 @@ tasks:
   exec-cluster-diagnostics:
     desc: Exec into the cluster diagnostics pod for network testing
     interactive: true
+    vars:
+      NAMESPACE: "{{.NAMESPACE | default .SOLO_NAMESPACE}}"
     cmds:
-      - echo "🔧 Starting interactive session with cluster-diagnostics pod..."
-      - kubectl exec -it deployment/cluster-diagnostics -n solo -- /bin/bash
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace"
+      - |
+        echo "🔄 Exec into cluster diagnostics pod..."
+        POD=$(kubectl get pods -n "${NAMESPACE}" -l app=cluster-diagnostics -o jsonpath="{.items[0].metadata.name}")
+        if [[ -n "$POD" ]]; then
+          echo "Pod found: $POD"
+          echo "Running exec..."
+          kubectl exec -it -n "${NAMESPACE}" "$POD" -- /bin/bash
+        else
+          echo "❌ No cluster diagnostics pod found in namespace '${NAMESPACE}'"
+          exit 1
+        fi
+    env:
+      NAMESPACE: "{{.NAMESPACE}}"
 
   cleanup-networkchaos:
-    desc: Clean up all NetworkChaos experiments
+    desc: Clean up all NetworkChaos resources
     cmds:
       - echo "🧹 Cleaning up NetworkChaos experiments..."
       - kubectl delete networkchaos --all -n chaos-mesh --ignore-not-found=true
-      - echo "✅ NetworkChaos experiments cleaned up."
+      - echo "✅ Cleanup completed."
 
   cleanup-cluster-diagnostics:
-    desc: Remove cluster diagnostics pods
+    desc: Clean up cluster diagnostics pods
+    vars:
+      NAMESPACE: "{{.NAMESPACE | default .SOLO_NAMESPACE}}"
     cmds:
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace"
       - echo "🧹 Cleaning up cluster diagnostics pods..."
-      - kubectl delete deployment cluster-diagnostics -n solo --ignore-not-found=true
-      - kubectl delete service cluster-diagnostics-svc -n solo --ignore-not-found=true
-      - kubectl delete configmap cluster-diagnostics-cm -n solo --ignore-not-found=true
-      - kubectl delete serviceaccount cluster-diagnostics-sa -n solo --ignore-not-found=true
+      - kubectl delete deployment cluster-diagnostics -n ${NAMESPACE} --ignore-not-found=true
+      - kubectl delete service cluster-diagnostics-svc -n ${NAMESPACE} --ignore-not-found=true
+      - kubectl delete configmap cluster-diagnostics-cm -n ${NAMESPACE} --ignore-not-found=true
+      - kubectl delete serviceaccount cluster-diagnostics-sa -n ${NAMESPACE} --ignore-not-found=true
       - kubectl delete clusterrole cluster-diagnostics-role --ignore-not-found=true
       - kubectl delete clusterrolebinding cluster-diagnostics-role-binding --ignore-not-found=true
-      - echo "✅ Cluster diagnostics pods cleaned up."
+      - echo "✅ Cluster diagnostics cleanup completed."
+    env:
+      NAMESPACE: "{{.NAMESPACE}}"
