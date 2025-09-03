@@ -120,6 +120,9 @@ jobs:
           
           npx semantic-release ${FLAGS}
 
+      - name: Compile Code
+        run: task build
+
       - name: Retrieve Container Version
         id: version
         run: echo "number=$(cat internal/version/VERSION | tr -d '[:space:]')" >> "${GITHUB_OUTPUT}"
