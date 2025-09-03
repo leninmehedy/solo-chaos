@@ -34,3 +34,4 @@ go.work.sum
 .task
 vendor
 bin
+unit-test-report.md
