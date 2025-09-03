@@ -1,0 +1,32 @@
+name: "PR Checks"
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: pr-checks-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/zxc-code-compiles.yaml
+    with:
+      custom-job-label: Standard
+
+  unit-tests:
+    name: Unit Tests
+    uses: ./.github/workflows/zxc-unit-test.yaml
+    needs:
+      - build
+    with:
+      custom-job-label: Standard
+
