@@ -35,3 +35,5 @@ go.work.sum
 vendor
 bin
 unit-test-report.md
+internal/version/VERSION
+internal/version/COMMIT

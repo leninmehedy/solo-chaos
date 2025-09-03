@@ -15,7 +15,7 @@ on:
 
 env:
   DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_NAME: solo-chaos
+  DOCKER_IMAGE_NAME: hammer
 
 defaults:
   run:
