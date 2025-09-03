@@ -25,11 +25,6 @@ jobs:
     name: Title Check
     runs-on: ubuntu-latest
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
-        with:
-          egress-policy: audit
-
       - name: Check PR Title
         uses: step-security/conventional-pr-title-action@101b3d5adffb51b5789997fea508c8313c8ddf02 # v3.2.2
         env:
