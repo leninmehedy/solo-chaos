@@ -120,3 +120,21 @@ tasks:
       - echo "✅ Cluster diagnostics cleanup completed."
     env:
       NAMESPACE: "{{.NAMESPACE}}"
+
+  network-partition-by-region:
+    desc: Run Network Chaos partition experiments between regions
+    vars:
+      NAMESPACE: "{{.SOLO_NAMESPACE}}"
+      SOURCE_REGION: "{{.SOURCE_REGION}}"
+      TARGET_REGION: "{{.TARGET_REGION}}"
+    cmds:
+      - echo "🔄 Running Network Partition Chaos experiments..."
+      - echo "NAMESPACE=${NAMESPACE}, SOURCE_REGION=${SOURCE_REGION}, TARGET_REGION=${TARGET_REGION}, UUID=${UUID}"
+      - envsubst < {{.TASKFILE_DIR}}/network/partition-by-region.yml | kubectl apply -f -
+      - echo "✅ Network Partition Chaos experiments applied."
+      - task show-experiment-status NAME="solo-chaos-network-partition-{{.UUID}}" TYPE="NetworkChaos"
+    env:
+      NAMESPACE: "{{.NAMESPACE}}"
+      SOURCE_REGION: "{{.SOURCE_REGION}}"
+      TARGET_REGION: "{{.TARGET_REGION}}"
+      UUID: "{{.UUID}}"

@@ -1,0 +1,28 @@
+# NetworkChaos manifest for simulating network partitioning between nodes based on region labels
+# This manifest creates a partition between nodes in SOURCE_REGION and TARGET_REGION
+# 
+# Usage: Use the task 'network-partition-by-region' with SOURCE_REGION and TARGET_REGION parameters
+# Example: task network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: solo-chaos-network-partition-${UUID}
+  namespace: chaos-mesh
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - ${NAMESPACE}
+    labelSelectors:
+      'solo.hedera.com/type': 'network-node'
+      'solo.hedera.com/region': '${SOURCE_REGION}'
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - ${NAMESPACE}
+      labelSelectors:
+        'solo.hedera.com/type': 'network-node'
+        'solo.hedera.com/region': '${TARGET_REGION}'
