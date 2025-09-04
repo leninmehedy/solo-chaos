@@ -75,13 +75,22 @@ tasks:
       REGION: "{{.REGION}}"
 
   exec-cluster-diagnostics:
-    desc: Exec into the cluster diagnostics pod for network testing
+    desc: Execute into cluster diagnostics pod for manual testing
     interactive: true
     vars:
       NAMESPACE: "{{.NAMESPACE | default .SOLO_NAMESPACE}}"
+      REGION: "{{.REGION | default \"us\"}}"
+      NODE_NAME: "{{.NODE_NAME | default \"node3\"}}"  # node3 is in US region by default
     cmds:
       - echo "🔍 Validating environment variables..."
       - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace"
+      - echo "🔗 Executing into cluster-diagnostics pod for {{.NODE_NAME}} ({{.REGION}} region)..."
+      - echo "💡 Once inside, you can run ping tests to other regions:"
+      - echo "  • ping node1-svc.cluster-diagnostics.svc.cluster.local  # AP region (should show ~200ms)"
+      - echo "  • ping node2-svc.cluster-diagnostics.svc.cluster.local  # EU region (should show ~100ms)" 
+      - echo "  • ping node4-svc.cluster-diagnostics.svc.cluster.local  # High latency (should show ~800ms)"
+      - echo "  • exit  # to exit the pod shell"
+      - echo ""
       - |
         echo "🔄 Exec into cluster diagnostics pod..."
         POD=$(kubectl get pods -n "${NAMESPACE}" -l app=cluster-diagnostics -o jsonpath="{.items[0].metadata.name}")
@@ -95,6 +104,8 @@ tasks:
         fi
     env:
       NAMESPACE: "{{.NAMESPACE}}"
+      REGION: "{{.REGION}}"
+      NODE_NAME: "{{.NODE_NAME}}"
 
   cleanup-networkchaos:
     desc: Clean up all NetworkChaos resources
