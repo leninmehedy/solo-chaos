@@ -67,13 +67,13 @@ tasks:
       - "go generate ./..."
 
   build:hammer:all:
-    desc: "Build the Cheetah daemon for all configured operating systems and architectures"
+    desc: "Build the Hammer for all configured operating systems and architectures"
     cmds:
       - task: build:hammer:all:os
 
   build:hammer:all:os:
     internal: true
-    desc: "Build the Cheetah daemon for all configured operating systems"
+    desc: "Build the Hammer for all configured operating systems"
     cmds:
       - for:
           var: OS
@@ -83,7 +83,7 @@ tasks:
 
   build:hammer:all:arch:
     internal: true
-    desc: "Build the Cheetah daemon for all configured architectures"
+    desc: "Build the Hammer for all configured architectures"
     cmds:
       - for:
           var: ARCH
@@ -94,7 +94,7 @@ tasks:
 
   build:hammer:
     internal: true
-    desc: "Build the Cheetah daemon for the specified operating system and architecture"
+    desc: "Build the Hammer for the specified operating system and architecture"
     env:
       GOOS: "{{coalesce .GOOS OS}}"
       GOARCH: "{{coalesce .GOARCH ARCH}}"
@@ -103,13 +103,13 @@ tasks:
       - cmd: chmod +x bin/hammer-{{coalesce .GOOS OS}}-{{coalesce .GOARCH ARCH}}
 
   hash:hammer:all:
-    desc: "Hash the Cheetah daemon binaries for all configured operating systems and architectures"
+    desc: "Hash the Hammer binaries for all configured operating systems and architectures"
     cmds:
       - task: hash:hammer:all:os
 
   hash:hammer:all:os:
     internal: true
-    desc: "Hash the Cheetah daemon binaries for all configured operating systems"
+    desc: "Hash the Hammer binaries for all configured operating systems"
     cmds:
       - for:
           var: OS
@@ -119,7 +119,7 @@ tasks:
 
   hash:hammer:all:arch:
     internal: true
-    desc: "Hash the Cheetah daemon binaries for all configured architectures"
+    desc: "Hash the Hammer binaries for all configured architectures"
     cmds:
       - for:
           var: ARCH
@@ -130,19 +130,19 @@ tasks:
 
   hash:hammer:
     internal: true
-    desc: "Hash the Cheetah daemon binaries for the specified operating system and architecture"
+    desc: "Hash the Hammer binaries for the specified operating system and architecture"
     dir: bin
     cmds:
       - cmd: sha256sum hammer-{{.GOOS}}-{{.GOARCH}} > hammer-{{.GOOS}}-{{.GOARCH}}.sha256
 
   sign:hammer:all:
-    desc: "Sign the Cheetah daemon binaries for all configured operating systems and architectures"
+    desc: "Sign the Hammer binaries for all configured operating systems and architectures"
     cmds:
       - task: sign:hammer:all:os
 
   sign:hammer:all:os:
     internal: true
-    desc: "Sign the Cheetah daemon binaries for all configured operating systems"
+    desc: "Sign the Hammer binaries for all configured operating systems"
     cmds:
       - for:
           var: OS
@@ -152,7 +152,7 @@ tasks:
 
   sign:hammer:all:arch:
     internal: true
-    desc: "Sign the Cheetah daemon binaries for all configured architectures"
+    desc: "Sign the Hammer binaries for all configured architectures"
     cmds:
       - for:
           var: ARCH
@@ -163,7 +163,7 @@ tasks:
 
   sign:hammer:
     internal: true
-    desc: "Sign the Cheetah daemon binaries for the specified operating system and architecture"
+    desc: "Sign the Hammer binaries for the specified operating system and architecture"
     env:
       GOOS: "{{coalesce .GOOS OS}}"
       GOARCH: "{{coalesce .GOARCH ARCH}}"
@@ -240,7 +240,7 @@ tasks:
     generates:
       - "/usr/local/go/**"
 
-  # Install the Cheetah Docker image into a Kind cluster for local development and testing rather than pulling from a registry.
+  # Install the Hammer Docker image into a Kind cluster for local development and testing rather than pulling from a registry.
   # We need to update the image tag to 'local' in the solo-charts to avoid pulling from the registry.
   load:
     cmds:
