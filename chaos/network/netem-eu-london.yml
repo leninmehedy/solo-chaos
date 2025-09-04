@@ -1,7 +1,7 @@
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: solo-chaos-network-netem-eu-london-${UUID}
+  name: solo-chaos-network-netem-eu-to-eu
   namespace: chaos-mesh
 spec:
   action: netem
@@ -12,9 +12,77 @@ spec:
     labelSelectors:
       'solo.hedera.com/type': 'network-node'
       'solo.hedera.com/region': 'eu'
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - ${NAMESPACE}
+      labelSelectors:
+        'solo.hedera.com/type': 'network-node'
+        'solo.hedera.com/region': 'eu'
   delay:
-    latency: '100ms'
+    latency: '10ms'    # eu <-> eu: 20ms RTT (10ms one-way intra-region)
     correlation: '80'
-    jitter: '20ms'
+    jitter: '5ms'
+  rate:
+    rate: '1gbps'
+---
+# EU to US latency (50ms one-way for 100ms RTT)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: solo-chaos-network-netem-eu-to-us
+  namespace: chaos-mesh
+spec:
+  action: netem
+  mode: all
+  selector:
+    namespaces:
+      - ${NAMESPACE}
+    labelSelectors:
+      'solo.hedera.com/type': 'network-node'
+      'solo.hedera.com/region': 'eu'
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - ${NAMESPACE}
+      labelSelectors:
+        'solo.hedera.com/type': 'network-node'
+        'solo.hedera.com/region': 'us'
+  delay:
+    latency: '50ms'    # eu <-> us: 100ms RTT (50ms one-way)
+    correlation: '80'
+    jitter: '10ms'
+  rate:
+    rate: '1gbps'
+---
+# EU to AP latency (150ms one-way for 300ms RTT)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: solo-chaos-network-netem-eu-to-ap
+  namespace: chaos-mesh
+spec:
+  action: netem
+  mode: all
+  selector:
+    namespaces:
+      - ${NAMESPACE}
+    labelSelectors:
+      'solo.hedera.com/type': 'network-node'
+      'solo.hedera.com/region': 'eu'
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - ${NAMESPACE}
+      labelSelectors:
+        'solo.hedera.com/type': 'network-node'
+        'solo.hedera.com/region': 'ap'
+  delay:
+    latency: '150ms'   # eu <-> ap: 300ms RTT (150ms one-way)
+    correlation: '80'
+    jitter: '30ms'
   rate:
     rate: '1gbps'
