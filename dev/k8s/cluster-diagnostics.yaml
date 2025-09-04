@@ -1,14 +1,9 @@
 ---
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: cluster-diagnostics
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cluster-diagnostics-cm
-  namespace: cluster-diagnostics
+  namespace: solo
 data:
   entrypoint.sh: |
     #!/usr/bin/env bash
@@ -33,23 +28,6 @@ data:
     ${SUDO} apt install -y curl ca-certificates jq netcat-traditional \
       dnsutils iperf3 iputils-ping iproute2 tcpdump iputils-tracepath socat
     
-    export ARCH="$(uname -m)"
-    case "${ARCH}" in
-      x86_64|amd64)
-        ARCH="amd64"
-        ;;
-      aarch64|arm64)
-        ARCH="arm64"
-        ;;
-      *)
-        echo "FATAL: Unsupported architecture: ${ARCH}"
-        exit 1
-        ;;
-    esac
-    
-    ${SUDO} curl -Lo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
-    ${SUDO} chmod +x /usr/local/bin/kubectl
-    
     [[ -d /app ]] || ${SUDO} mkdir -p /app
     
     ${SUDO} iperf3 -p 8081 -s --timestamps &
@@ -60,81 +38,11 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: node1-svc
-  namespace: cluster-diagnostics
+  name: cluster-diagnostics-svc
+  namespace: solo
 spec:
   selector:
     app: cluster-diagnostics
-    solo.hedera.com/node-name: 'node1'
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: socat
-      port: 8080
-      targetPort: 8080
-      protocol: TCP
-    - name: iperf3
-      port: 8081
-      targetPort: 8081
-      protocol: TCP
-
----
-# Headless service for direct pod access (ping, iperf3, etc.)
-apiVersion: v1
-kind: Service
-metadata:
-  name: node2-svc
-  namespace: cluster-diagnostics
-spec:
-  selector:
-    app: cluster-diagnostics
-    solo.hedera.com/node-name: 'node2'
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: socat
-      port: 8080
-      targetPort: 8080
-      protocol: TCP
-    - name: iperf3
-      port: 8081
-      targetPort: 8081
-      protocol: TCP
-
----
-# Headless service for direct pod access (ping, iperf3, etc.)
-apiVersion: v1
-kind: Service
-metadata:
-  name: node3-svc
-  namespace: cluster-diagnostics
-spec:
-  selector:
-    app: cluster-diagnostics
-    solo.hedera.com/node-name: 'node3'
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: socat
-      port: 8080
-      targetPort: 8080
-      protocol: TCP
-    - name: iperf3
-      port: 8081
-      targetPort: 8081
-      protocol: TCP
-
----
-# Headless service for direct pod access (ping, iperf3, etc.)
-apiVersion: v1
-kind: Service
-metadata:
-  name: node4-svc
-  namespace: cluster-diagnostics
-spec:
-  selector:
-    app: cluster-diagnostics
-    solo.hedera.com/node-name: 'node4'
   type: ClusterIP
   clusterIP: None
   ports:
@@ -152,7 +60,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cluster-diagnostics-sa
-  namespace: cluster-diagnostics
+  namespace: solo
 automountServiceAccountToken: true
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -179,133 +87,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: cluster-diagnostics-sa
-    namespace: cluster-diagnostics
+    namespace: solo
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-diagnostics-node1
-  namespace: cluster-diagnostics
-spec:
-    replicas: 1
-    selector:
-      matchLabels:
-        app: cluster-diagnostics
-    template:
-        metadata:
-          labels:
-            app: cluster-diagnostics
-            solo.hedera.com/node-name: 'node1'
-            solo.hedera.com/type: 'network-node'
-            solo.hedera.com/region: 'ap'
-        spec:
-          serviceAccountName: cluster-diagnostics-sa
-          automountServiceAccountToken: true
-          containers:
-            - name: cluster-diagnostics
-              image: debian:bookworm-20250811-slim
-              command: ["/bin/bash", "/app/entrypoint.sh"]
-              volumeMounts:
-                - name: entrypoint
-                  mountPath: /app/entrypoint.sh
-                  subPath: entrypoint.sh
-              ports:
-                - containerPort: 8080
-                  name: socat
-                  protocol: TCP
-                - containerPort: 8081
-                  name: iperf3
-                  protocol: TCP
-          volumes:
-            - name: entrypoint
-              configMap:
-                name: cluster-diagnostics-cm
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cluster-diagnostics-node2
-  namespace: cluster-diagnostics
-spec:
-    replicas: 1
-    selector:
-      matchLabels:
-        app: cluster-diagnostics
-    template:
-        metadata:
-          labels:
-            app: cluster-diagnostics
-            solo.hedera.com/node-name: 'node2'
-            solo.hedera.com/type: 'network-node'
-            solo.hedera.com/region: 'eu'
-        spec:
-          serviceAccountName: cluster-diagnostics-sa
-          automountServiceAccountToken: true
-          containers:
-            - name: cluster-diagnostics
-              image: debian:bookworm-20250811-slim
-              command: ["/bin/bash", "/app/entrypoint.sh"]
-              volumeMounts:
-                - name: entrypoint
-                  mountPath: /app/entrypoint.sh
-                  subPath: entrypoint.sh
-              ports:
-                - containerPort: 8080
-                  name: socat
-                  protocol: TCP
-                - containerPort: 8081
-                  name: iperf3
-                  protocol: TCP
-          volumes:
-            - name: entrypoint
-              configMap:
-                name: cluster-diagnostics-cm
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cluster-diagnostics-node3
-  namespace: cluster-diagnostics
-spec:
-    replicas: 1
-    selector:
-      matchLabels:
-        app: cluster-diagnostics
-    template:
-        metadata:
-          labels:
-            app: cluster-diagnostics
-            solo.hedera.com/node-name: 'node3'
-            solo.hedera.com/type: 'network-node'
-            solo.hedera.com/region: 'us'
-        spec:
-          serviceAccountName: cluster-diagnostics-sa
-          automountServiceAccountToken: true
-          containers:
-            - name: cluster-diagnostics
-              image: debian:bookworm-20250811-slim
-              command: ["/bin/bash", "/app/entrypoint.sh"]
-              volumeMounts:
-                - name: entrypoint
-                  mountPath: /app/entrypoint.sh
-                  subPath: entrypoint.sh
-              ports:
-                - containerPort: 8080
-                  name: socat
-                  protocol: TCP
-                - containerPort: 8081
-                  name: iperf3
-                  protocol: TCP
-          volumes:
-            - name: entrypoint
-              configMap:
-                name: cluster-diagnostics-cm
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cluster-diagnostics-node4
-  namespace: cluster-diagnostics
+  name: cluster-diagnostics
+  namespace: solo
 spec:
   replicas: 1
   selector:
@@ -315,9 +103,8 @@ spec:
     metadata:
       labels:
         app: cluster-diagnostics
-        solo.hedera.com/node-name: 'node4'
         solo.hedera.com/type: 'network-node'
-        solo.hedera.com/latency: '800ms'
+        solo.hedera.com/region: '${REGION}'
     spec:
       serviceAccountName: cluster-diagnostics-sa
       automountServiceAccountToken: true

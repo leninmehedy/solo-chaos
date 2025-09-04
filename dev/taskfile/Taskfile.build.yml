@@ -179,10 +179,17 @@ tasks:
     cmds:
       - task: "test:unit"
 
+  test:env-validations:
+    desc: "Run environment variable validation tests"
+    cmds:
+      - cmd: 'cd chaos && [ -x ./test-validations.sh ] && ./test-validations.sh || (echo "Error: ./test-validations.sh not found or not executable" >&2; exit 1)'
+
   test:unit:
     deps:
       - "generate"
     cmds:
+      # Run environment variable validation tests first
+      - task: "test:env-validations"
       # Using go-testreport v0.3.2
       - "go install github.com/becheran/go-testreport@90efc1ce13c872f23d6bc8a069527c26288b8f9c"
       - "go test -race -cover -json ./cmd/... | go-testreport -output unit-test-report.md -vars 'Title:Unit Test Report'"
