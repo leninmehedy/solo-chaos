@@ -45,3 +45,27 @@ tasks:
     env:
       NAMESPACE: "{{.NAMESPACE}}"
       UUID: "{{.UUID}}"
+
+  deploy-cluster-diagnostics:
+    desc: Deploy cluster diagnostics for network testing
+    vars:
+      REGION: "{{.REGION | default \"us\"}}"
+    cmds:
+      - echo "🔄 Deploying cluster diagnostics for region {{.REGION}}..."
+      - kubectl apply -f {{.TASKFILE_DIR}}/../dev/k8s/cluster-diagnostics.yaml
+      - echo "✅ Cluster diagnostics deployed"
+
+  exec-cluster-diagnostics:
+    desc: Execute into cluster diagnostics pod for manual testing
+    vars:
+      REGION: "{{.REGION | default \"us\"}}"
+      NODE_NAME: "{{.NODE_NAME | default \"node3\"}}"  # node3 is in US region by default
+    cmds:
+      - echo "🔗 Executing into cluster-diagnostics pod for {{.NODE_NAME}} ({{.REGION}} region)..."
+      - echo "💡 Once inside, you can run ping tests to other regions:"
+      - echo "  • ping node1-svc.cluster-diagnostics.svc.cluster.local  # AP region (should show ~200ms)"
+      - echo "  • ping node2-svc.cluster-diagnostics.svc.cluster.local  # EU region (should show ~100ms)" 
+      - echo "  • ping node4-svc.cluster-diagnostics.svc.cluster.local  # High latency (should show ~800ms)"
+      - echo "  • exit  # to exit the pod shell"
+      - echo ""
+      - kubectl exec -it deployment/cluster-diagnostics-{{.NODE_NAME}} -n cluster-diagnostics -- /bin/bash
