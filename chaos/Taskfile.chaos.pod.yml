@@ -11,6 +11,8 @@ tasks:
       NODE_NAMES: "{{.NODE_NAMES}}"
       DURATION: '{{.DURATION | default "30s"}}'
     cmds:
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace --require-node-names"
       - echo "🔄 Running Pod Failure Chaos experiments..."
       - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
       - envsubst < {{.TASKFILE_DIR}}/pod/consensus-node-failure.yml | kubectl apply -f -
@@ -28,6 +30,8 @@ tasks:
       NAMESPACE: "{{.SOLO_NAMESPACE}}"
       NODE_NAMES: "{{.NODE_NAMES}}"
     cmds:
+      - echo "🔍 Validating environment variables..."
+      - "{{.TASKFILE_DIR}}/validate-env.sh --require-namespace --require-node-names"
       - echo "🔄 Running Pod Kill Chaos experiments..."
       - echo "NAMESPACE=${NAMESPACE}, NODE_NAMES=${NODE_NAMES}, UUID=${UUID}"
       - envsubst < {{.TASKFILE_DIR}}/pod/consensus-node-kill.yml | kubectl apply -f -
@@ -37,4 +41,3 @@ tasks:
       NAMESPACE: "{{.NAMESPACE}}"
       NODE_NAMES: "{{.NODE_NAMES}}"
       UUID: "{{.UUID}}"
-      

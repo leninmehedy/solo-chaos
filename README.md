@@ -77,16 +77,130 @@ task chaos:network:consensus-network-bandwidth NODE_NAMES=node1 RATE=1gbps
 ```
 
 #### Network latency simulation (netem)
-Run network emulation chaos tests to simulate various network conditions:
+Run network emulation chaos tests to simulate realistic global network conditions:
 ```bash
 task chaos:network:consensus-network-netem
 ```
 
-This applies multiple network emulation scenarios:
-- 800ms delay
-- AP Melbourne network conditions
-- EU London network conditions  
-- US Ohio network conditions
+This applies comprehensive network latency emulation with proper round-trip times (RTT) between global regions:
+
+##### Global Latency Matrix
+- **us ↔ us**: 20ms RTT (10ms one-way)
+- **us ↔ eu**: 100ms RTT (50ms one-way) 
+- **us ↔ ap**: 200ms RTT (100ms one-way)
+- **eu ↔ eu**: 20ms RTT (10ms one-way)
+- **eu ↔ ap**: 300ms RTT (150ms one-way)
+- **ap ↔ ap**: 20ms RTT (10ms one-way)
+- **High latency test**: 800ms delay
+
+##### Technical Implementation
+Each regional configuration file contains multiple NetworkChaos resources using the `target` attribute:
+
+- **`netem-us-ohio.yml`**: US intra-region + US→EU + US→AP latencies
+- **`netem-eu-london.yml`**: EU intra-region + EU→US + EU→AP latencies
+- **`netem-ap-melbourne.yml`**: AP intra-region + AP→US + AP→EU latencies
+- **`netem-800ms.yml`**: High latency testing
+
+##### NetworkChaos Resources Created
+The task creates 10 NetworkChaos resources with fixed names (no UUIDs):
+
+**US region resources:**
+- `solo-chaos-network-netem-us-to-us` (10ms)
+- `solo-chaos-network-netem-us-to-eu` (50ms)
+- `solo-chaos-network-netem-us-to-ap` (100ms)
+
+**EU region resources:**
+- `solo-chaos-network-netem-eu-to-eu` (10ms)
+- `solo-chaos-network-netem-eu-to-us` (50ms)
+- `solo-chaos-network-netem-eu-to-ap` (150ms)
+
+**AP region resources:**
+- `solo-chaos-network-netem-ap-to-ap` (10ms)
+- `solo-chaos-network-netem-ap-to-us` (100ms)
+- `solo-chaos-network-netem-ap-to-eu` (150ms)
+
+**Test resource:**
+- `solo-chaos-network-netem-800ms` (800ms)
+
+##### Configuration Example
+```yaml
+# Cross-region latency (us-to-eu)
+spec:
+  selector:
+    labelSelectors:
+      'solo.hedera.com/region': 'us'
+  target:
+    selector:
+      labelSelectors:
+        'solo.hedera.com/region': 'eu'
+  delay:
+    latency: '50ms'  # One-way latency for 100ms RTT
+```
+
+**Note:** Using fixed resource names ensures that subsequent runs replace existing resources rather than creating duplicates, preventing latency accumulation.
+
+#### Cluster diagnostics for network testing
+Deploy diagnostic pods to test network connectivity and analyze chaos experiment effects:
+
+```bash
+# Deploy cluster diagnostics pod (defaults to 'us' region)
+task chaos:network:deploy-cluster-diagnostics
+
+# Deploy cluster diagnostics pod with specific region
+task chaos:network:deploy-cluster-diagnostics REGION=eu
+task chaos:network:deploy-cluster-diagnostics REGION=ap
+task chaos:network:deploy-cluster-diagnostics REGION=us
+
+# Exec into the diagnostics pod for interactive testing
+task chaos:network:exec-cluster-diagnostics
+
+# Clean up diagnostics pod when done
+task chaos:network:cleanup-cluster-diagnostics
+```
+
+The diagnostics pod includes useful network tools:
+- **Connectivity testing**: `ping`, `traceroute`, `netcat`
+- **Performance testing**: `iperf3` for bandwidth/latency measurement
+- **Packet analysis**: `tcpdump` for network debugging
+- **DNS testing**: `dig`, `nslookup` for DNS resolution
+- **General utilities**: `curl`, `jq` for API testing
+
+**Example usage inside the diagnostics pod:**
+```bash
+# Test connectivity to consensus nodes (update service names based on your Solo setup)
+ping network-node1.solo.svc.cluster.local
+
+# Measure latency with iperf3
+iperf3 -c network-node2.solo.svc.cluster.local
+
+# Check active NetworkChaos experiments
+kubectl get networkchaos -n chaos-mesh
+
+# Test HTTP connectivity
+curl -I http://network-node3.solo.svc.cluster.local:8080
+```
+
+**Region Configuration:** The cluster-diagnostics pod is deployed in the solo namespace with a configurable `solo.hedera.com/region` label (defaults to 'us' if not specified). This allows you to test network chaos effects from different regional perspectives by deploying the diagnostics pod with the appropriate region label to match your testing scenario.
+
+#### Network partition by region
+Run network partition chaos tests to simulate network partitioning between nodes in different regions:
+```bash
+task chaos:network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=eu
+```
+
+Examples of region-based partitioning:
+```bash
+# Partition between US and EU regions
+task chaos:network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=eu
+
+# Partition between US and Asia-Pacific regions  
+task chaos:network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=ap
+
+# Partition between EU and Asia-Pacific regions
+task chaos:network:network-partition-by-region SOURCE_REGION=eu TARGET_REGION=ap
+```
+
+This creates bidirectional network partitions between nodes based on their `solo.hedera.com/region` labels, simulating scenarios where network connectivity is lost between different geographical regions.
 
 ### Hammer Job Testing
 
@@ -120,6 +234,7 @@ task --list
 # Run specific chaos tests with simplified names
 task pod:consensus-pod-kill NODE_NAMES=node5
 task network:consensus-network-netem
+task network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=eu
 task show-experiment-status NAME=<experiment-name> TYPE=<PodChaos|NetworkChaos>
 ```
 
@@ -128,6 +243,7 @@ task show-experiment-status NAME=<experiment-name> TYPE=<PodChaos|NetworkChaos>
 * show-experiment-status:                    Show the status of the pod chaos experiment
 * network:consensus-network-bandwidth:       Run Network Chaos experiments (limited bandwidth)
 * network:consensus-network-netem:           Run Network Chaos experiments (network emulation)
+* network:network-partition-by-region:       Run Network Chaos partition experiments between regions
 * pod:consensus-pod-failure:                 Run Pod Chaos experiments (failure)
 * pod:consensus-pod-kill:                    Run Pod Chaos experiments (kill)
 ```
@@ -150,6 +266,10 @@ Run `task --list` to see all available tasks:
 ### Network Chaos Tasks  
 - `task chaos:network:consensus-network-bandwidth` - Limit network bandwidth
 - `task chaos:network:consensus-network-netem` - Apply network emulation for different latencies
+- `task chaos:network:network-partition-by-region` - Create network partitions between regions
+- `task chaos:network:deploy-cluster-diagnostics` - Deploy cluster diagnostics pod for network testing (supports REGION parameter)
+- `task chaos:network:exec-cluster-diagnostics` - Exec into cluster diagnostics pod
+- `task chaos:network:cleanup-cluster-diagnostics` - Remove cluster diagnostics pod
 
 ### Utility Tasks
 - `task chaos:show-experiment-status` - Show chaos experiment status
