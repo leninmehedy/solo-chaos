@@ -185,19 +185,19 @@ curl -I http://network-node3.solo.svc.cluster.local:8080
 #### Network partition by region
 Run network partition chaos tests to simulate network partitioning between nodes in different regions:
 ```bash
-task chaos:network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
+task chaos:network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=eu
 ```
 
 Examples of region-based partitioning:
 ```bash
-# Partition between US East and EU West regions
-task chaos:network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
+# Partition between US and EU regions
+task chaos:network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=eu
 
-# Partition between different AWS regions  
-task chaos:network:network-partition-by-region SOURCE_REGION=us-west-2 TARGET_REGION=ap-southeast-1
+# Partition between US and Asia-Pacific regions  
+task chaos:network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=ap
 
-# Partition between US regions
-task chaos:network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=us-west-2
+# Partition between EU and Asia-Pacific regions
+task chaos:network:network-partition-by-region SOURCE_REGION=eu TARGET_REGION=ap
 ```
 
 This creates bidirectional network partitions between nodes based on their `solo.hedera.com/region` labels, simulating scenarios where network connectivity is lost between different geographical regions.
@@ -234,7 +234,7 @@ task --list
 # Run specific chaos tests with simplified names
 task pod:consensus-pod-kill NODE_NAMES=node5
 task network:consensus-network-netem
-task network:network-partition-by-region SOURCE_REGION=us-east-1 TARGET_REGION=eu-west-1
+task network:network-partition-by-region SOURCE_REGION=us TARGET_REGION=eu
 task show-experiment-status NAME=<experiment-name> TYPE=<PodChaos|NetworkChaos>
 ```
 
