@@ -19,6 +19,7 @@ spec:
       'solo.hedera.com/region': '${SOURCE_REGION}'
   direction: both
   target:
+    mode: all
     selector:
       namespaces:
         - ${NAMESPACE}
