@@ -109,13 +109,6 @@ jobs:
       - name: Install Semantic Release
         run: npm install -g semantic-release@24.2.4 @semantic-release/exec@7.1.0 conventional-changelog-conventionalcommits@8.0.0
 
-      - name: Compile Code
-        run: task build
-
-      - name: Retrieve Container Version
-        id: version
-        run: echo "number=$(cat internal/version/VERSION | tr -d '[:space:]')" >> "${GITHUB_OUTPUT}"
-
       - name: Publish Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -126,6 +119,10 @@ jobs:
           fi
           
           npx semantic-release ${FLAGS}
+
+      - name: Retrieve Container Version
+        id: version
+        run: echo "number=$(cat internal/version/VERSION | tr -d '[:space:]')" >> "${GITHUB_OUTPUT}"
 
       - name: Build Docker Image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
